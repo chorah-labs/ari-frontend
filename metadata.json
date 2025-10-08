@@ -1,0 +1,5 @@
+{
+  "name": "Chorah Labs Automated Regulatory Intelligence Platform",
+  "description": "A frontend for the Chorah Labs multi-agent AI platform, enabling AI-powered Q&A, document generation, and data analysis with a clean, conversational UI.",
+  "requestFramePermissions": []
+}
