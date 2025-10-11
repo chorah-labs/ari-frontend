@@ -1,6 +1,5 @@
 
-const API_BASE_URL = 'http://localhost:8000'; // Replace with API base URL in production
-
+export const API_BASE_URL = import.meta.env.VITE_ARI_API_URL;
 export const api = {
   register: async (email: string, password: string) => {
     const params = new URLSearchParams();
@@ -57,7 +56,7 @@ export const api = {
       },
       body: JSON.stringify({
         query,
-        conversation_id: 'e89c8a82-cf8c-4680-87cc-cba97feee36d',  // Dev placeholder for Demo V0.1
+        conversation_id: '83d6c96f-a4e0-49da-b37c-4104738385be',  // Dev placeholder for Demo V0.1
         collection_name: 'cmc_docs'                               // Dev placeholder for Demo V0.1
       }),
     });
@@ -103,10 +102,10 @@ export const api = {
     if (!response.ok) {
       throw new Error("Failed to fetch conversations");
     }
-
     return response.json(); // <-- returns { conversations: [ConversationsOut] }
   },
 
+  // Need to finish this feature
   getConversationMessages: async (conversationId, accessToken: string) => {
     const response = await fetch(`${API_BASE_URL}/chat/${conversationId}/messages`, {
       method: 'GET',
