@@ -58,7 +58,11 @@ export default function BackendWakeUp({
   if (!backendReady)
     return (
       <div className="flex flex-col items-center justify-center h-screen">
-        <div className="animate-spin mb-4">⏳</div>
+        <img
+          src="/loader.svg"
+          alt="Loading animation"
+          className="w-20 h-20 mb-6 animate-pulse"
+        />
         <div>Waking up backend… please wait a few seconds</div>
       </div>
     );
