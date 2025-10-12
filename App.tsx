@@ -3,6 +3,7 @@ import React from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './hooks/useAuth';
+import BackendWakeUp from './components/BackendWakeup';
 import AuthPage from './components/AuthPage';
 import ChatPage from './components/ChatPage';
 
@@ -59,7 +60,9 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <AuthProvider>
-        <AppRoutes />
+        <BackendWakeUp maxWaitSeconds={45}>
+          <AppRoutes />
+        </BackendWakeUp>
       </AuthProvider>
     </HashRouter>
   );
