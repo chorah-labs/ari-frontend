@@ -51,33 +51,70 @@ const ChatPage: React.FC = () => {
       sender: 'user',
       content: query,
     };
-    
+
+    // show user message immediately
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
     const assistantMessageId = `assistant-${Date.now()}`;
-    // Add a placeholder for the assistant's response
-    setMessages(prev => [...prev, { id: assistantMessageId, sender: 'assistant', content: '' }]);
 
+    // add placeholder for streaming assistant message
+    setMessages(prev => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        sender: 'assistant',
+        content: '',     // finalized markdown so far
+        partial: '',     // current live text chunk
+        isStreaming: true,
+      },
+    ]);
+
+    // start the stream
     api.streamQuery(
       query,
       auth.accessToken,
       (chunk) => {
+        // update the partial text (fast updates)
         setMessages(prev =>
           prev.map(msg =>
             msg.id === assistantMessageId
-              ? { ...msg, content: msg.content + chunk }
+              ? { ...msg, partial: (msg.partial ?? '') + chunk }
               : msg
           )
         );
       },
       () => {
+        // on stream completion: merge partial -> finalized
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: msg.content + (msg.partial ?? ''),
+                  partial: '',
+                  isStreaming: false,
+                }
+              : msg
+          )
+        );
         setIsLoading(false);
       }
     ).catch(error => {
-        console.error("Failed to fetch stream:", error);
-        setMessages(prev => prev.map(msg => msg.id === assistantMessageId ? {...msg, content: "Sorry, I encountered an error. Please try again."} : msg));
-        setIsLoading(false);
+      console.error('Failed to fetch stream:', error);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: 'Sorry, I encountered an error. Please try again.',
+                partial: '',
+                isStreaming: false,
+              }
+            : msg
+        )
+      );
+      setIsLoading(false);
     });
   };
 
