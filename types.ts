@@ -3,6 +3,8 @@ export interface Message {
   id?: string;
   sender: 'user' | 'assistant';
   content: string;
+  partial?: string;
+  isStreaming?: boolean;
   tokens_used?: number;
   model_name?: string;
   tool_used?: string;

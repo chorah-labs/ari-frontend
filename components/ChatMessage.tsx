@@ -4,17 +4,18 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { UserIcon, BotIcon } from './icons';
 import type { Message } from '../types';
+import { normalizeMarkdown } from '../utils/normalizeMarkdown';
 
 interface ChatMessageProps {
   message: Message;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
-  const { sender, content } = message;
+  const { sender, content, partial, isStreaming } = message;
   const isUser = sender === 'user';
-
   const Icon = isUser ? UserIcon : BotIcon;
   
+
   // User message with bubble
   if (isUser) {
     return (
@@ -26,29 +27,59 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
         {/* Message content in bubble */}
         <div className="rounded-lg p-4 max-w-xl break-words bg-blue-600 text-white ml-auto">
-          <ReactMarkdown components={markdownComponents}>
-            {content}
-          </ReactMarkdown>
+          <ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
         </div>
       </div>
     );
   }
 
+  {/* Debug: log final markdown content */}
+  {isStreaming === false && console.log("Final markdown content:", JSON.stringify(content))}
+
   // AI assistant message without bubble (rendered directly)
   return (
     <div className="flex items-start space-x-4 mb-4">
-      {/* Icon */}
       <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-indigo-500">
         <Icon className="w-5 h-5 text-white" />
       </div>
 
-      {/* Message content directly rendered without bubble */}
-      <div className="flex-1 text-gray-100 break-words">
-        <ReactMarkdown components={markdownComponents}>
-          {content}
-        </ReactMarkdown>
+      {/* Raw mono rendering for demo */}
+      <div className="flex-1 text-gray-100 break-words font-mono whitespace-pre-wrap">
+        {/* Full content */}
+        {!isStreaming && content}
+
+        {/* Partial / streaming content */}
+        {isStreaming && partial && (
+          <span className="text-gray-400">
+            {partial}
+            <span className="opacity-60">▍</span>
+          </span>
+        )}
       </div>
     </div>
+
+    // {/* Markdown rendering (needs to be fixed) */}
+    // <div className="flex items-start space-x-4 mb-4">
+    //   {/* Icon */}
+    //   <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-indigo-500">
+    //     <Icon className="w-5 h-5 text-white" />
+    //   </div>
+
+    //   {/* Message content directly rendered without bubble */}
+    //   <div className="flex-1 text-gray-100 break-words">
+    //     {/* Render normalized finalized markdown content */}
+    //     <ReactMarkdown components={markdownComponents}>
+    //       {isStreaming ? content : normalizeMarkdown(content)}
+    //     </ReactMarkdown>
+    //       {/* Show partial streaming text in monospace */}
+    //       {isStreaming && partial && (
+    //         <div className="font-mono text-sm whitespace-pre-wrap text-gray-400 animate-pulse mt-1">
+    //           {partial}
+    //           <span className="opacity-60">▍</span> {/* blinking cursor */}
+    //         </div>
+    //       )}
+    //   </div>
+    // </div>
   );
 };
 
