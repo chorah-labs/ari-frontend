@@ -56,7 +56,7 @@ export const api = {
       },
       body: JSON.stringify({
         query,
-        conversation_id: '83d6c96f-a4e0-49da-b37c-4104738385be',  // Dev placeholder for Demo V0.1
+        conversation_id: 'eaac2aee-8f75-4d91-bc5b-9db1ce2f80e5',  // Dev placeholder for Demo V0.1
         collection_name: 'cmc_docs'                               // Dev placeholder for Demo V0.1
       }),
     });
