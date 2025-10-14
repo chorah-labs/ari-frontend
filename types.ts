@@ -1,6 +1,6 @@
 
 export interface Message {
-  id?: string;
+  id: string;
   sender: 'user' | 'assistant';
   content: string;
   partial?: string;
