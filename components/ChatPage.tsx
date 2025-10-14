@@ -72,13 +72,15 @@ const scrollToBottom = useCallback((smooth = true) => {
     api.getConversationMessages(conversationId, auth.accessToken)
       .then((data: Message[]) => {
         // data is already an array
-        const normalized: Message[] = data.map(msg => ({
-          ...msg,
-          id: msg.id?.toString() ?? uuidv4(), // ensure unique ID for React key
-          content: msg.content ?? '',
-          partial: '',
-          isStreaming: false,
-        }));
+        const normalized: Message[] = data
+          .map(msg => ({
+            ...msg,
+            id: msg.id?.toString() ?? uuidv4(), // ensure unique ID for React key
+            content: msg.content ?? '',
+            partial: '',
+            isStreaming: false,
+          }))
+          .reverse(); // show oldest first
         setMessages(normalized);
       })
       .catch(error => {
