@@ -44,21 +44,26 @@ export const api = {
   streamQuery: async (
     query: string,
     accessToken: string,
+    conversationId: string | null,
+    collection_name: string,
     onChunk: (chunk: string) => void,
     onClose: () => void
-    // No access token needed based on provided backend code
   ) => {
+    // Prepare request body
+    const body: any = { query, collection_name: collection_name || "cmc_docs" };
+
+    // Set conversation ID if provided
+    if (conversationId && !conversationId.startsWith("temp-")) {
+      body.conversation_id = conversationId;
+    }
+
     const response = await fetch(`${API_BASE_URL}/chat/query_stream`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        query,
-        conversation_id: '83d6c96f-a4e0-49da-b37c-4104738385be',  // Dev placeholder for Demo V0.1
-        collection_name: 'cmc_docs'                               // Dev placeholder for Demo V0.1
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -67,22 +72,23 @@ export const api = {
     }
 
     const reader = response.body?.getReader();
+    if (!reader) throw new Error("Failed to get stream reader");
+    
     const decoder = new TextDecoder();
 
-    if (!reader) {
-        throw new Error("Failed to get stream reader");
-    }
-
     try {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-                break;
-            }
-            const textChunk = decoder.decode(value, { stream: true });
-            // The provided backend yields raw chunks. If it were standard SSE, we'd parse "data:" lines.
-            onChunk(textChunk);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const textChunk = decoder.decode(value, { stream: true });
+        // The provided backend yields raw chunks. If it were standard SSE, we'd parse "data:" lines.
+        try {
+          const parsed = JSON.parse(textChunk);
+          onChunk(parsed.text ?? textChunk);
+        } catch {
+          onChunk(textChunk);
         }
+      }
     } catch (error) {
         console.error("Error reading stream:", error);
     } finally {
