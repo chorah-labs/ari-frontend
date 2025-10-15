@@ -1,30 +1,37 @@
 
 import React, { useContext, useState, useRef, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import Sidebar from './Sidebar';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import AuthContext from '../contexts/AuthContext';
 import { BotIcon } from './icons';
-import { api } from '../services/api';
+import { api, API_BASE_URL } from '../services/api';
 import type { Message, Conversation } from '../types';
 
 const ChatPage: React.FC = () => {
   const auth = useContext(AuthContext);
-  const { conversationId } = useParams<{ conversationId: string }>();
+  const { conversationId: paramId } = useParams<{ conversationId: string }>();
+  const navigate = useNavigate();
+
+  // State
+  
+  const [tempConversationId, setTempConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
+  
+  const conversationId = paramId ?? tempConversationId;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
 
-const scrollToBottom = useCallback((smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: smooth ? "smooth" : "auto",
-    });
-  }, []);
+  const scrollToBottom = useCallback((smooth = true) => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: smooth ? "smooth" : "auto",
+      });
+    }, []);
 
   // Detect user scrolling
   const handleScroll = useCallback(() => {
@@ -33,7 +40,6 @@ const scrollToBottom = useCallback((smooth = true) => {
 
     const isNearBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight < 80; // px threshold
-
     setAutoScroll(isNearBottom);
   }, []);
 
@@ -48,9 +54,7 @@ const scrollToBottom = useCallback((smooth = true) => {
 
   // Auto-scroll only if user is near bottom
   useEffect(() => {
-    if (autoScroll) {
-      scrollToBottom();
-    }
+    if (autoScroll) scrollToBottom();
   }, [messages, isLoading, autoScroll, scrollToBottom]);
 
   // Fetch all past conversations for the sidebar
@@ -64,7 +68,7 @@ const scrollToBottom = useCallback((smooth = true) => {
 
   // Fetch messages for a given conversation
   useEffect(() => {
-    if (!auth?.accessToken || !conversationId) {
+    if (!auth?.accessToken || !conversationId || conversationId.startsWith("temp-")) {
       setMessages([]);
       return;
     }
@@ -72,15 +76,13 @@ const scrollToBottom = useCallback((smooth = true) => {
     api.getConversationMessages(conversationId, auth.accessToken)
       .then((data: Message[]) => {
         // data is already an array
-        const normalized: Message[] = data
-          .map(msg => ({
-            ...msg,
-            id: msg.id?.toString() ?? uuidv4(), // ensure unique ID for React key
-            content: msg.content ?? '',
-            partial: '',
-            isStreaming: false,
-          }))
-          .reverse(); // show oldest first
+        const normalized: Message[] = data.map(msg => ({
+          ...msg,
+          id: msg.id?.toString() ?? uuidv4(), // ensure unique ID for React key
+          content: msg.content ?? '',
+          partial: '',
+          isStreaming: false,
+        })).reverse(); // show oldest first
         setMessages(normalized);
       })
       .catch(error => {
@@ -89,22 +91,64 @@ const scrollToBottom = useCallback((smooth = true) => {
       });
   }, [auth?.accessToken, conversationId]);
 
-  // Send user message
-  const handleSendMessage = (query: string) => {
-    if (!query.trim()) return;
+  // // --- SSE streaming for conversation creation updates ---
+  // useEffect(() => {
+  //   if (!conversationId || !auth?.accessToken) return;
 
+  //   // Close any existing stream
+  //   if (eventSourceRef.current) {
+  //     eventSourceRef.current.close();
+  //   }
+
+  //   const url = new URL(`${API_BASE_URL}/chat/query_stream`);
+  //   if (!conversationId.startsWith('temp-')) {
+  //     url.searchParams.set('conversation_id', conversationId);
+  //   }
+
+  //   const source = new EventSource(url.toString());
+  //   eventSourceRef.current = source;
+
+  //   source.addEventListener('conversation', (event: MessageEvent) => {
+  //     const data = JSON.parse(event.data);
+
+  //     // Replace temp conversation with real backend ID
+  //     if (tempConversationId) {
+  //       setConversations(prev =>
+  //         prev.map(conv =>
+  //           conv.id === tempConversationId
+  //             ? { id: data.conversation_id, title: data.title, updated_at: data.updated_at }
+  //             : conv
+  //         )
+  //       );
+  //       setConversationId(data.conversation_id);
+  //       setTempConversationId(null);
+  //       navigate(`/chat/${data.conversation_id}`);
+  //     }
+  //   });
+
+  //   return () => {
+  //     source.close();
+  //     eventSourceRef.current = null;
+  //   };
+  // }, [conversationId, tempConversationId, auth?.accessToken, navigate]);
+
+  // --- Handle sending a message and lazy conversation creation ---
+  const handleSendMessage = (query: string) => {
+    if (!query.trim() || !auth?.accessToken) return;
+
+    // Optimistic user message
     const userMessage: Message = {
       id: uuidv4(),
       sender: 'user',
       content: query,
-      isStreaming: false,
       partial: '',
+      isStreaming: false,
     };
-
-    // show user message immediately
     setMessages(prev => [...prev, userMessage]);
+
     setIsLoading(true);
 
+    // Assistant placeholder
     const assistantMessageId = uuidv4();
     const assistantPlaceholder: Message = {
       id: assistantMessageId,
@@ -115,12 +159,35 @@ const scrollToBottom = useCallback((smooth = true) => {
     };
     setMessages(prev => [...prev, assistantPlaceholder]);
 
-    // start the stream
+    // Call backend
     api.streamQuery(
       query,
       auth.accessToken,
+      conversationId && !conversationId.startsWith('temp-') ? conversationId : null,
+      'cmc_docs',
       (chunk) => {
-        // update the partial text (fast updates)
+        // Parse backend chunk for conversation info
+        try {
+          const data = JSON.parse(chunk);
+
+          if (data.conversation_id && tempConversationId) {
+            // Replace temp conversation with real ID
+            setConversations(prev =>
+              prev.map(conv =>
+                conv.id === tempConversationId
+                  ? { id: data.conversation_id, title: data.title, updated_at: data.updated_at }
+                  : conv
+              )
+            );
+            setConversationId(data.conversation_id);
+            setTempConversationId(null);
+            navigate(`/chat/${data.conversation_id}`);
+            return; // skip normal chunk append
+          }
+        } catch {
+          // Not JSON, treat as normal assistant text
+        }
+
         setMessages(prev =>
           prev.map(msg =>
             msg.id === assistantMessageId
@@ -130,32 +197,22 @@ const scrollToBottom = useCallback((smooth = true) => {
         );
       },
       () => {
-        // on stream completion: merge partial -> finalized
+        // Finalize assistant message
         setMessages(prev =>
           prev.map(msg =>
             msg.id === assistantMessageId
-              ? {
-                  ...msg,
-                  content: msg.content + (msg.partial ?? ''),
-                  partial: '',
-                  isStreaming: false,
-                }
+              ? { ...msg, content: msg.partial ?? '', partial: '', isStreaming: false }
               : msg
           )
         );
         setIsLoading(false);
       }
-    ).catch(error => {
-      console.error('Failed to fetch stream:', error);
+    ).catch(err => {
+      console.error('Failed to fetch stream:', err);
       setMessages(prev =>
         prev.map(msg =>
           msg.id === assistantMessageId
-            ? {
-                ...msg,
-                content: 'Sorry, I encountered an error. Please try again.',
-                partial: '',
-                isStreaming: false,
-              }
+            ? { ...msg, content: 'Sorry, something went wrong.', partial: '', isStreaming: false }
             : msg
         )
       );
@@ -163,9 +220,24 @@ const scrollToBottom = useCallback((smooth = true) => {
     });
   };
 
+  // --- Handle creating new chat ---
+  const handleNewChat = () => {
+    const tempId = `temp-${Date.now()}`;
+    setTempConversationId(tempId);
+
+    const newConv: Conversation = {
+      id: tempId,
+      title: 'New Conversation',
+      updated_at: new Date().toISOString(),
+    };
+    setConversations(prev => [newConv, ...prev]);
+
+    navigate(`/chat/${tempId}`);
+  };
+
   return (
     <div className="flex h-screen bg-gray-800 text-white">
-      <Sidebar conversations={conversations} />
+      <Sidebar conversations={conversations} onNewChat={handleNewChat} />
       <main className="flex flex-col flex-1 relative">
         {/* Scroll Container */}
         <div ref={containerRef} className="flex-1 overflow-y-auto p-6">
@@ -179,7 +251,7 @@ const scrollToBottom = useCallback((smooth = true) => {
             ) : (
               <div className="space-y-6">
                 {messages?.map((msg) => (
-                  <ChatMessage key={msg.id ?? uuidv4()} message={msg} />
+                  <ChatMessage key={msg.id} message={msg} />
                 ))}
                 {isLoading && messages.length > 0 && messages[messages.length - 1].sender === 'assistant' && (
                   <div className="flex items-start space-x-4">
