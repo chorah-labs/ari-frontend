@@ -22,6 +22,7 @@ const ChatPage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
+  const assistantMessageIdRef = useRef<string | null>(null);
   
   const conversationId = paramId ?? tempConversationId;
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -91,134 +92,142 @@ const ChatPage: React.FC = () => {
       });
   }, [auth?.accessToken, conversationId]);
 
-  // // --- SSE streaming for conversation creation updates ---
-  // useEffect(() => {
-  //   if (!conversationId || !auth?.accessToken) return;
-
-  //   // Close any existing stream
-  //   if (eventSourceRef.current) {
-  //     eventSourceRef.current.close();
-  //   }
-
-  //   const url = new URL(`${API_BASE_URL}/chat/query_stream`);
-  //   if (!conversationId.startsWith('temp-')) {
-  //     url.searchParams.set('conversation_id', conversationId);
-  //   }
-
-  //   const source = new EventSource(url.toString());
-  //   eventSourceRef.current = source;
-
-  //   source.addEventListener('conversation', (event: MessageEvent) => {
-  //     const data = JSON.parse(event.data);
-
-  //     // Replace temp conversation with real backend ID
-  //     if (tempConversationId) {
-  //       setConversations(prev =>
-  //         prev.map(conv =>
-  //           conv.id === tempConversationId
-  //             ? { id: data.conversation_id, title: data.title, updated_at: data.updated_at }
-  //             : conv
-  //         )
-  //       );
-  //       setConversationId(data.conversation_id);
-  //       setTempConversationId(null);
-  //       navigate(`/chat/${data.conversation_id}`);
-  //     }
-  //   });
-
-  //   return () => {
-  //     source.close();
-  //     eventSourceRef.current = null;
-  //   };
-  // }, [conversationId, tempConversationId, auth?.accessToken, navigate]);
+  useEffect(() => {
+    console.log("Messages state updated:", messages);
+  }, [messages]);
 
   // --- Handle sending a message and lazy conversation creation ---
-  const handleSendMessage = (query: string) => {
+  const handleSendMessage = (query: string, tempId?: string) => {
     if (!query.trim() || !auth?.accessToken) return;
 
     // Optimistic user message
     const userMessage: Message = {
       id: uuidv4(),
-      sender: 'user',
+      sender: "user",
       content: query,
-      partial: '',
+      partial: "",
       isStreaming: false,
     };
     setMessages(prev => [...prev, userMessage]);
-
     setIsLoading(true);
 
     // Assistant placeholder
-    const assistantMessageId = uuidv4();
+    const newId = uuidv4();
+    assistantMessageIdRef.current = newId;
+    console.log("Assistant message ID assigned for streaming:", assistantMessageIdRef.current);
     const assistantPlaceholder: Message = {
-      id: assistantMessageId,
-      sender: 'assistant',
-      content: '',
-      partial: '',
+      id: newId,
+      sender: "assistant",
+      content: "",
+      partial: "",
       isStreaming: true,
     };
     setMessages(prev => [...prev, assistantPlaceholder]);
 
     // Call backend
-    api.streamQuery(
-      query,
-      auth.accessToken,
-      conversationId && !conversationId.startsWith('temp-') ? conversationId : null,
-      'cmc_docs',
-      (chunk) => {
-        // Parse backend chunk for conversation info
-        try {
-          const data = JSON.parse(chunk);
+    api
+      .streamQuery(
+        query,
+        auth.accessToken,
+        conversationId && !conversationId.startsWith("temp-")
+          ? conversationId
+          : tempId ?? null,
+        "cmc_docs",
+        (chunk) => {
+          // Example: 
+          //   { "conversation_id": "...", "title": "...", "updated_at": "..." }
+          //   or { "choices": [ { "delta": { "content": "Hello" } } ] }
 
-          if (data.conversation_id && tempConversationId) {
-            // Replace temp conversation with real ID
+          // Handle conversation metadata from first message
+          if (chunk?.conversation_id && tempConversationId) {
             setConversations(prev =>
               prev.map(conv =>
                 conv.id === tempConversationId
-                  ? { id: data.conversation_id, title: data.title, updated_at: data.updated_at }
+                  ? {
+                      id: chunk.conversation_id,
+                      title: chunk.title,
+                      updated_at: chunk.updated_at
+                    }
                   : conv
               )
             );
-            setConversationId(data.conversation_id);
             setTempConversationId(null);
-            navigate(`/chat/${data.conversation_id}`);
-            return; // skip normal chunk append
+            navigate(`/chat/${chunk.conversation_id}`);
+            return;
           }
-        } catch {
-          // Not JSON, treat as normal assistant text
-        }
+          // Handle streaming message content
+          const currentMessageId = assistantMessageIdRef.current;
+          if (!currentMessageId) {
+            console.error("No assistantMessageId found in ref during streaming update.");
+            return;
+          }
+          
+          const delta = chunk?.choices?.[0]?.delta?.content ?? "";
+          const finishReason = chunk?.choices?.[0]?.finish_reason ?? null;
 
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === assistantMessageId
-              ? { ...msg, partial: (msg.partial ?? '') + chunk }
-              : msg
-          )
-        );
-      },
-      () => {
-        // Finalize assistant message
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === assistantMessageId
-              ? { ...msg, content: msg.partial ?? '', partial: '', isStreaming: false }
+          console.log("Delta extracted for message streaming:", delta);
+          console.log("Finish reason:", finishReason);
+
+          if (delta) {
+            setMessages(prev => {
+              const found = prev.some(m => m.id ===currentMessageId);
+              console.log("[delta] Updating assistant message", { delta, found, prev });
+              return prev.map(msg =>
+                msg.id ===currentMessageId
+                  ? {
+                      ...msg,
+                      partial: (msg.partial ?? "") + delta
+                    }
+                  : msg
+              );
+            });
+          }
+
+          if (finishReason === 'stop') {
+            console.log("Received finish_reason=stop");
+            finalizeAssistantMessage();
+          }
+        },
+        () => {
+          console.log("Stream connection closed.");
+          finalizeAssistantMessage();
+        }
+      )
+      .catch((err) => {
+        console.error("Failed to fetch stream:", err);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageIdRef.current
+              ? {
+                  ...msg,
+                  content: "Sorry, something went wrong.",
+                  partial: "",
+                  isStreaming: false,
+                }
               : msg
           )
         );
         setIsLoading(false);
-      }
-    ).catch(err => {
-      console.error('Failed to fetch stream:', err);
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === assistantMessageId
-            ? { ...msg, content: 'Sorry, something went wrong.', partial: '', isStreaming: false }
-            : msg
-        )
-      );
-      setIsLoading(false);
-    });
+      });
+
+      const finalizeAssistantMessage = () => {
+        const currentId = assistantMessageIdRef.current;
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === currentId
+              ? {
+                  ...msg,
+                  content: msg.content + (msg.partial ?? "").trim(),
+                  partial: "",
+                  isStreaming: false,
+                }
+              : msg
+          )
+        );
+        setIsLoading(false);
+      };
   };
+
 
   // --- Handle creating new chat ---
   const handleNewChat = () => {
@@ -227,7 +236,7 @@ const ChatPage: React.FC = () => {
 
     const newConv: Conversation = {
       id: tempId,
-      title: 'New Conversation',
+      title: "New Conversation",
       updated_at: new Date().toISOString(),
     };
     setConversations(prev => [newConv, ...prev]);
