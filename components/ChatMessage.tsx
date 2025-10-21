@@ -52,29 +52,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         )}
       </div>
     </div>
-
-    // {/* Markdown rendering (needs to be fixed) */}
-    // <div className="flex items-start space-x-4 mb-4">
-    //   {/* Icon */}
-    //   <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-indigo-500">
-    //     <Icon className="w-5 h-5 text-white" />
-    //   </div>
-
-    //   {/* Message content directly rendered without bubble */}
-    //   <div className="flex-1 text-gray-100 break-words">
-    //     {/* Render normalized finalized markdown content */}
-    //     <ReactMarkdown components={markdownComponents}>
-    //       {isStreaming ? content : normalizeMarkdown(content)}
-    //     </ReactMarkdown>
-    //       {/* Show partial streaming text in monospace */}
-    //       {isStreaming && partial && (
-    //         <div className="font-mono text-sm whitespace-pre-wrap text-gray-400 animate-pulse mt-1">
-    //           {partial}
-    //           <span className="opacity-60">▍</span> {/* blinking cursor */}
-    //         </div>
-    //       )}
-    //   </div>
-    // </div>
   );
 };
 
