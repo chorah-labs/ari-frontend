@@ -23,6 +23,7 @@ const ChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const assistantMessageIdRef = useRef<string | null>(null);
+  const pendingNavigationIdRef = useRef<string | null>(null);
   
   const conversationId = paramId ?? tempConversationId;
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -96,6 +97,7 @@ const ChatPage: React.FC = () => {
     console.log("Messages state updated:", messages);
   }, [messages]);
 
+
   // --- Handle sending a message and lazy conversation creation ---
   const handleSendMessage = (query: string, tempId?: string) => {
     if (!query.trim() || !auth?.accessToken) return;
@@ -152,9 +154,10 @@ const ChatPage: React.FC = () => {
               )
             );
             setTempConversationId(null);
-            navigate(`/chat/${chunk.conversation_id}`);
+            pendingNavigationIdRef.current = chunk.conversation_id; // Defer navigation until stream finishes
             return;
           }
+
           // Handle streaming message content
           const currentMessageId = assistantMessageIdRef.current;
           if (!currentMessageId) {
@@ -164,33 +167,33 @@ const ChatPage: React.FC = () => {
           
           const delta = chunk?.choices?.[0]?.delta?.content ?? "";
           const finishReason = chunk?.choices?.[0]?.finish_reason ?? null;
-
+          
           console.log("Delta extracted for message streaming:", delta);
           console.log("Finish reason:", finishReason);
-
+          
           if (delta) {
             setMessages(prev => {
               const found = prev.some(m => m.id ===currentMessageId);
               console.log("[delta] Updating assistant message", { delta, found, prev });
               return prev.map(msg =>
                 msg.id ===currentMessageId
-                  ? {
-                      ...msg,
-                      partial: (msg.partial ?? "") + delta
-                    }
-                  : msg
+                ? {
+                  ...msg,
+                  partial: (msg.partial ?? "") + delta
+                }
+                : msg
               );
             });
           }
-
+          
           if (finishReason === 'stop') {
-            console.log("Received finish_reason=stop");
-            finalizeAssistantMessage();
+            console.log("Received finish_reason=stop - finalizing after render");
+            requestAnimationFrame(() => finalizeAssistantMessage());
           }
         },
         () => {
           console.log("Stream connection closed.");
-          finalizeAssistantMessage();
+          requestAnimationFrame(() => finalizeAssistantMessage());
         }
       )
       .catch((err) => {
@@ -198,39 +201,49 @@ const ChatPage: React.FC = () => {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMessageIdRef.current
-              ? {
-                  ...msg,
-                  content: "Sorry, something went wrong.",
-                  partial: "",
-                  isStreaming: false,
-                }
-              : msg
+            ? {
+                ...msg,
+                content: "Sorry, something went wrong.",
+                partial: "",
+                isStreaming: false,
+              }
+            : msg
           )
         );
         setIsLoading(false);
       });
+  
+    const finalizeAssistantMessage = () => {
+      console.log("[finalizeAssistantMessage] Finalizing...")
+      const currentId = assistantMessageIdRef.current;
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.partial
+            ? {
+                ...msg,
+                content: msg.content + (msg.partial ?? "").trim(),
+                partial: "",
+                isStreaming: false,
+              }
+            : msg
+        )
+      );
+      setIsLoading(false);
 
-      const finalizeAssistantMessage = () => {
-        const currentId = assistantMessageIdRef.current;
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === currentId
-              ? {
-                  ...msg,
-                  content: msg.content + (msg.partial ?? "").trim(),
-                  partial: "",
-                  isStreaming: false,
-                }
-              : msg
-          )
-        );
-        setIsLoading(false);
-      };
+      if (pendingNavigationIdRef.current) {
+        const conversation_id = pendingNavigationIdRef.current;
+        pendingNavigationIdRef.current = null;
+        requestAnimationFrame(() => navigate(`/chat/${conversation_id}`));
+      }
+    }
   };
-
 
   // --- Handle creating new chat ---
   const handleNewChat = () => {
+    if (tempConversationId) {
+      console.log("Alreadying in a new chat.")
+      return
+    }
     const tempId = `temp-${Date.now()}`;
     setTempConversationId(tempId);
 
