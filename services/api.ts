@@ -46,7 +46,7 @@ export const api = {
     accessToken: string,
     conversationId: string | null,
     collection_name: string,
-    onChunk: (chunk: string) => void,
+    onChunk: (data: any) => void,
     onClose: () => void
   ) => {
     // Prepare request body
@@ -73,27 +73,63 @@ export const api = {
 
     const reader = response.body?.getReader();
     if (!reader) throw new Error("Failed to get stream reader");
-    
     const decoder = new TextDecoder();
 
+    let buffer = "";
+    let doneStreaming = false;
+
     try {
-      while (true) {
+      while (!doneStreaming) {
         const { done, value } = await reader.read();
         if (done) break;
-        const textChunk = decoder.decode(value, { stream: true });
-        // The provided backend yields raw chunks. If it were standard SSE, we'd parse "data:" lines.
+
+        const decoded = decoder.decode(value, { stream: true });
+        buffer += decoded;
+
+        let newlineIndex;
+        while ((newlineIndex = buffer.indexOf("\n\n")) >= 0) {
+          const line = buffer.slice(0, newlineIndex).trim();
+          buffer = buffer.slice(newlineIndex + 2);
+
+          if (!line) continue;
+          const cleanLine = line.replace(/^data:\s*/, "").trim();
+
+          if (cleanLine === "[DONE]") {
+            console.log("Streaming complete.");
+            doneStreaming = true;
+            break;
+          }
+          try {
+            const parsed = JSON.parse(cleanLine);
+            // console.log("Parsed SSE line data type: ", typeof parsed);
+            console.log("Parsed SSE Line going to onChunk:", parsed);
+            onChunk(parsed);
+          } catch (err) {
+            // fallback if not JSON
+            console.log("Fallback catch block ran. Raw SSE line:", line);
+            console.warn("Non-JSON SSE line:", line, err);
+            onChunk({ choices: [{ delta: { content: line } }] });
+          }
+        }
+      }
+      const remaining = buffer.trim();
+      if (remaining) {
         try {
-          const parsed = JSON.parse(textChunk);
-          onChunk(parsed.text ?? textChunk);
+          const cleanRemaining = remaining.startsWith("data: ")
+            ? remaining.slice(5).trim()
+            : remaining;
+          const parsed = JSON.parse(cleanRemaining);
+          onChunk(parsed);
         } catch {
-          onChunk(textChunk);
+          console.log("Remaining raw line fallback triggered:", remaining);
+          onChunk({ choices: [{ delta: { content: remaining } }] });
         }
       }
     } catch (error) {
-        console.error("Error reading stream:", error);
+      console.error("Error reading stream:", error);
     } finally {
-        reader.releaseLock();
-        onClose();
+      reader.releaseLock();
+      onClose();
     }
   },
 
