@@ -6,6 +6,7 @@ import { useAuth } from './hooks/useAuth';
 import BackendWakeUp from './components/BackendWakeup';
 import AuthPage from './components/AuthPage';
 import ChatPage from './components/ChatPage';
+import EmailConfirmationPage from './components/EmailConfirmationPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -32,6 +33,7 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="check-email" element={<EmailConfirmationPage />} />
         <Route 
           path="/chat" 
           element={
