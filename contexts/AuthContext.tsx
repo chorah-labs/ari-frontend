@@ -36,11 +36,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [navigate]);
 
   const register = useCallback(async (email: string, password: string) => {
-    await api.register(email, password);
-    // Automatically log in after successful registration
-    const data = await api.login(email, password);
-    await handleLogin(data);
-  }, [navigate]);
+    const res = await api.register(email, password);
+    return res;
+    // NOTE: We intentionally do NOT auto-login after registration.
+    // email verification is required for all users.
+  }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('accessToken');

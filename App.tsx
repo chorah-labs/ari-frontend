@@ -6,6 +6,8 @@ import { useAuth } from './hooks/useAuth';
 import BackendWakeUp from './components/BackendWakeup';
 import AuthPage from './components/AuthPage';
 import ChatPage from './components/ChatPage';
+import EmailConfirmationPage from './components/EmailConfirmationPage';
+import EmailVerifiedPage from './components/EmailVerifiedPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,27 +33,34 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        <Route 
-          path="/chat" 
-          element={
-            <ProtectedRoute>
-                <ChatPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route
-          path="/chat/:conversationId"
-          element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route 
-          path="*" 
-          element={<Navigate to={isAuthenticated ? "/chat" : "/auth"} />} 
-        />
+      {/* Auth routes */}
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="check-email" element={<EmailConfirmationPage />} />
+      <Route path="/email-verified" element={<EmailVerifiedPage />} />
+
+      {/* Protected routes */}
+      <Route 
+        path="/chat" 
+        element={
+          <ProtectedRoute>
+            <ChatPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat/:conversationId"
+        element={
+          <ProtectedRoute>
+            <ChatPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Default route */}
+      <Route 
+        path="*" 
+        element={<Navigate to={isAuthenticated ? "/chat" : "/auth"} replace />} 
+      />
     </Routes>
   );
 };
@@ -60,7 +69,7 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <AuthProvider>
-        <BackendWakeUp maxWaitSeconds={45}>
+        <BackendWakeUp maxWaitSeconds={60}>
           <AppRoutes />
         </BackendWakeUp>
       </AuthProvider>

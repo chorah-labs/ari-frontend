@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { BotIcon } from './icons';
+import { useNavigate } from 'react-router-dom';
 
 type FormMode = 'login' | 'register';
 
@@ -12,6 +13,7 @@ const AuthPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, register } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +24,8 @@ const AuthPage: React.FC = () => {
         await login(email, password);
       } else {
         await register(email, password);
+        navigate('/check-email');
+        return;
       }
       // Navigation will be handled by the AuthContext
     } catch (err: any) {

@@ -2,23 +2,22 @@
 export const API_BASE_URL = import.meta.env.VITE_ARI_API_URL;
 export const api = {
   register: async (email: string, password: string) => {
-    const params = new URLSearchParams();
-    params.append('username', email);
-    params.append('password', password);
-
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: params,
+      body: JSON.stringify({
+        email,
+        password,
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Registration failed');
     }
-    return response.json();
+    return await response.json();
   },
 
   login: async (email: string, password: string) => {
