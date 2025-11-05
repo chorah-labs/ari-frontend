@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Sidebar from './Sidebar';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
+import ConversationFeedback from './ConversationFeedback';
 import AuthContext from '../contexts/AuthContext';
 import { BotIcon } from './icons';
 import { api, API_BASE_URL } from '../services/api';
@@ -140,7 +141,7 @@ const ChatPage: React.FC = () => {
           //   { "conversation_id": "...", "title": "...", "updated_at": "..." }
           //   or { "choices": [ { "delta": { "content": "Hello" } } ] }
 
-          // Handle conversation metadata from first message
+          // --- Handle conversation metadata from first message ---
           if (chunk?.conversation_id && tempConversationId) {
             setConversations(prev =>
               prev.map(conv =>
@@ -158,7 +159,25 @@ const ChatPage: React.FC = () => {
             return;
           }
 
-          // Handle streaming message content
+          // --- Handle message_start event from backend (real message ID) ---
+          if (chunk?.event === "message_start" && chunk.message_id) {
+            const realId = chunk.message_id;
+
+            // Replace temp assistant ID in message state with real ID
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === assistantMessageIdRef.current
+                  ? { ...msg, id: realId }
+                  : msg
+              )
+            );
+
+            // Update the ref so future delta chunks go to the correct message
+            assistantMessageIdRef.current = realId;
+            return;
+          }
+
+          // --- Handle streaming message content (delta chunks) ---
           const currentMessageId = assistantMessageIdRef.current;
           if (!currentMessageId) {
             console.error("No assistantMessageId found in ref during streaming update.");
@@ -272,9 +291,16 @@ const ChatPage: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                {messages?.map((msg) => (
-                  <ChatMessage key={msg.id} message={msg} />
-                ))}
+                {messages?.map((msg, i) => {
+                  const isLastAssistant =
+                    msg.sender === "assistant" &&
+                    messages.slice(i + 1).every(m => m.sender !== "assistant")
+                  
+                  return (
+                    <ChatMessage key={msg.id} message={msg} isLastAssistant={isLastAssistant} />
+                  );
+                })}
+                
                 {isLoading && messages.length > 0 && messages[messages.length - 1].sender === 'assistant' && (
                   <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center">

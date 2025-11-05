@@ -7,6 +7,8 @@ export interface Message {
   isStreaming?: boolean;
   tokens_used?: number;
   model_name?: string;
+  agents_used?: string;
+  feedback?: string;
   tool_used?: string;
   created_at?: string;
 }
