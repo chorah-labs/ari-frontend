@@ -41,7 +41,7 @@ const AuthPage: React.FC = () => {
         <div className="text-center mb-8">
             <BotIcon className="w-16 h-16 mx-auto text-indigo-400" />
             <h1 className="text-3xl font-bold mt-4">Chorah Labs ARI</h1>
-            <p className="text-gray-400 mt-2">Your Biopharma AI Copilot</p>
+            <p className="text-gray-400 mt-2">Optimizing science, amplifying impact.</p>
         </div>
         
         <div className="bg-gray-800 p-8 rounded-lg shadow-2xl">

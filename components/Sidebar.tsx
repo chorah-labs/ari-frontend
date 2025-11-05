@@ -16,7 +16,7 @@ const Sidebar: React.FC<SidebarProps> = ({ conversations, onNewChat }) => {
     <aside className="w-64 bg-gray-900 p-4 flex flex-col">
       <div className="flex items-center mb-6 border-b border-gray-700 pb-4">
         <BotIcon className="w-8 h-8 text-indigo-400 mr-3" />
-        <h1 className="text-xl font-bold">Chorah Copilot</h1>
+        <h1 className="text-xl font-bold">Chorah Labs ARI</h1>
       </div>
   
       <button 
