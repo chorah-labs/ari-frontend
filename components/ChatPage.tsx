@@ -7,7 +7,8 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ConversationFeedback from './ConversationFeedback';
 import AuthContext from '../contexts/AuthContext';
-import { useAutoScroll } from '../hooks/useAutoScroll'
+import { useAutoScroll } from '../hooks/useAutoScroll';
+import { useConversations } from '../hooks/useConversations';
 import { BotIcon } from './icons';
 import { api, API_BASE_URL } from '../services/api';
 import type { Message, Conversation } from '../types';
@@ -18,57 +19,39 @@ const ChatPage: React.FC = () => {
   const navigate = useNavigate();
 
   // === State ===
-  const [tempConversationId, setTempConversationId] = useState<string | null>(null);
+
   const [messages, setMessages] = useState<Message[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const assistantMessageIdRef = useRef<string | null>(null);
   const pendingNavigationIdRef = useRef<string | null>(null);
-  const conversationId = paramId ?? tempConversationId;
   const containerRef = useRef<HTMLDivElement>(null);
-
+  
   // --- Auto scrolling ---
   const { autoScroll, scrollToBottom, messagesEndRef, setAutoScroll } =
-    useAutoScroll(containerRef, messages, isLoading)
+  useAutoScroll(containerRef, messages, isLoading)
+  
+  // --- Convresations ---
+  const {
+    conversations,
+    setConversations,
+    tempConversationId,
+    setTempConversationId,
+    pendingNavigationId,
+    setPendingNavigationId,
+    createNewConversation
+  } = useConversations(auth?.accessToken)
+  
+  const conversationId = paramId ?? tempConversationId;
 
-  // const scrollToBottom = useCallback((smooth = true) => {
-  //     messagesEndRef.current?.scrollIntoView({
-  //       behavior: smooth ? "smooth" : "auto",
-  //     });
-  //   }, []);
-
-  // // Detect user scrolling
-  // const handleScroll = useCallback(() => {
-  //   const container = containerRef.current;
-  //   if (!container) return;
-
-  //   const isNearBottom =
-  //     container.scrollHeight - container.scrollTop - container.clientHeight < 80; // px threshold
-  //   setAutoScroll(isNearBottom);
-  // }, []);
-
-  // // Attach scroll listener
+  
+  // // Fetch all past conversations for the sidebar
   // useEffect(() => {
-  //   const container = containerRef.current;
-  //   if (!container) return;
-
-  //   container.addEventListener("scroll", handleScroll);
-  //   return () => container.removeEventListener("scroll", handleScroll);
-  // }, [handleScroll]);
-
-  // // Auto-scroll only if user is near bottom
-  // useEffect(() => {
-  //   if (autoScroll) scrollToBottom();
-  // }, [messages, isLoading, autoScroll, scrollToBottom]);
-
-  // Fetch all past conversations for the sidebar
-  useEffect(() => {
-    if (!auth?.accessToken) return;
+  //   if (!auth?.accessToken) return;
     
-    api.getConversations(auth.accessToken)
-      .then(data => setConversations(data.conversations))
-      .catch(error => console.error("Failed to fetch conversations:", error));
-  }, [auth?.accessToken]);
+  //   api.getConversations(auth.accessToken)
+  //     .then(data => setConversations(data.conversations))
+  //     .catch(error => console.error("Failed to fetch conversations:", error));
+  // }, [auth?.accessToken]);
 
   // Fetch messages for a given conversation
   useEffect(() => {
@@ -258,28 +241,28 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // --- Handle creating new chat ---
-  const handleNewChat = () => {
-    if (tempConversationId) {
-      console.log("Alreadying in a new chat.")
-      return
-    }
-    const tempId = `temp-${Date.now()}`;
-    setTempConversationId(tempId);
+  // // --- Handle creating new chat ---
+  // const handleNewChat = () => {
+  //   if (tempConversationId) {
+  //     console.log("Alreadying in a new chat.")
+  //     return
+  //   }
+  //   const tempId = `temp-${Date.now()}`;
+  //   setTempConversationId(tempId);
 
-    const newConv: Conversation = {
-      id: tempId,
-      title: "New Conversation",
-      updated_at: new Date().toISOString(),
-    };
-    setConversations(prev => [newConv, ...prev]);
+  //   const newConv: Conversation = {
+  //     id: tempId,
+  //     title: "New Conversation",
+  //     updated_at: new Date().toISOString(),
+  //   };
+  //   setConversations(prev => [newConv, ...prev]);
 
-    navigate(`/chat/${tempId}`);
-  };
+  //   navigate(`/chat/${tempId}`);
+  // };
 
   return (
     <div className="flex h-screen bg-gray-800 text-white">
-      <Sidebar conversations={conversations} onNewChat={handleNewChat} />
+      <Sidebar conversations={conversations} onNewChat={() => createNewConversation(navigate)} />
       <main className="flex flex-col flex-1 relative">
         {/* Scroll Container */}
         <div ref={containerRef} className="flex-1 overflow-y-auto p-6">
