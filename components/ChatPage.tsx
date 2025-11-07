@@ -9,6 +9,7 @@ import ConversationFeedback from './ConversationFeedback';
 import AuthContext from '../contexts/AuthContext';
 import { useAutoScroll } from '../hooks/useAutoScroll';
 import { useConversations } from '../hooks/useConversations';
+import { useMessages } from '../hooks/useMessages';
 import { BotIcon } from './icons';
 import { api, API_BASE_URL } from '../services/api';
 import type { Message, Conversation } from '../types';
@@ -20,15 +21,10 @@ const ChatPage: React.FC = () => {
 
   // === State ===
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+
   const assistantMessageIdRef = useRef<string | null>(null);
   const pendingNavigationIdRef = useRef<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   
-  // --- Auto scrolling ---
-  const { autoScroll, scrollToBottom, messagesEndRef, setAutoScroll } =
-  useAutoScroll(containerRef, messages, isLoading)
   
   // --- Convresations ---
   const {
@@ -42,7 +38,13 @@ const ChatPage: React.FC = () => {
   } = useConversations(auth?.accessToken)
   
   const conversationId = paramId ?? tempConversationId;
-
+  const { messages, setMessages } = useMessages(conversationId, auth?.accessToken);
+  const [isLoading, setIsLoading] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // --- Auto scrolling ---
+  const { autoScroll, scrollToBottom, messagesEndRef, setAutoScroll } =
+  useAutoScroll(containerRef, messages, isLoading)
   
   // // Fetch all past conversations for the sidebar
   // useEffect(() => {
@@ -54,29 +56,29 @@ const ChatPage: React.FC = () => {
   // }, [auth?.accessToken]);
 
   // Fetch messages for a given conversation
-  useEffect(() => {
-    if (!auth?.accessToken || !conversationId || conversationId.startsWith("temp-")) {
-      setMessages([]);
-      return;
-    }
+  // useEffect(() => {
+  //   if (!auth?.accessToken || !conversationId || conversationId.startsWith("temp-")) {
+  //     setMessages([]);
+  //     return;
+  //   }
 
-    api.getConversationMessages(conversationId, auth.accessToken)
-      .then((data: Message[]) => {
-        // data is already an array
-        const normalized: Message[] = data.map(msg => ({
-          ...msg,
-          id: msg.id?.toString() ?? uuidv4(), // ensure unique ID for React key
-          content: msg.content ?? '',
-          partial: '',
-          isStreaming: false,
-        })).reverse(); // show oldest first
-        setMessages(normalized);
-      })
-      .catch(error => {
-        console.error("Failed to fetch messages:", error);
-        setMessages([]); // fallback to empty array
-      });
-  }, [auth?.accessToken, conversationId]);
+  //   api.getConversationMessages(conversationId, auth.accessToken)
+  //     .then((data: Message[]) => {
+  //       // data is already an array
+  //       const normalized: Message[] = data.map(msg => ({
+  //         ...msg,
+  //         id: msg.id?.toString() ?? uuidv4(), // ensure unique ID for React key
+  //         content: msg.content ?? '',
+  //         partial: '',
+  //         isStreaming: false,
+  //       })).reverse(); // show oldest first
+  //       setMessages(normalized);
+  //     })
+  //     .catch(error => {
+  //       console.error("Failed to fetch messages:", error);
+  //       setMessages([]); // fallback to empty array
+  //     });
+  // }, [auth?.accessToken, conversationId]);
 
   useEffect(() => {
     console.log("Messages state updated:", messages);
