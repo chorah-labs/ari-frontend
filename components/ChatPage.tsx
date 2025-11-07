@@ -7,6 +7,7 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ConversationFeedback from './ConversationFeedback';
 import AuthContext from '../contexts/AuthContext';
+import { useAutoScroll } from '../hooks/useAutoScroll'
 import { BotIcon } from './icons';
 import { api, API_BASE_URL } from '../services/api';
 import type { Message, Conversation } from '../types';
@@ -16,49 +17,49 @@ const ChatPage: React.FC = () => {
   const { conversationId: paramId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
 
-  // State
-  
+  // === State ===
   const [tempConversationId, setTempConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [autoScroll, setAutoScroll] = useState(true);
   const assistantMessageIdRef = useRef<string | null>(null);
   const pendingNavigationIdRef = useRef<string | null>(null);
-  
   const conversationId = paramId ?? tempConversationId;
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = useCallback((smooth = true) => {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: smooth ? "smooth" : "auto",
-      });
-    }, []);
+  // --- Auto scrolling ---
+  const { autoScroll, scrollToBottom, messagesEndRef, setAutoScroll } =
+    useAutoScroll(containerRef, messages, isLoading)
 
-  // Detect user scrolling
-  const handleScroll = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
+  // const scrollToBottom = useCallback((smooth = true) => {
+  //     messagesEndRef.current?.scrollIntoView({
+  //       behavior: smooth ? "smooth" : "auto",
+  //     });
+  //   }, []);
 
-    const isNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 80; // px threshold
-    setAutoScroll(isNearBottom);
-  }, []);
+  // // Detect user scrolling
+  // const handleScroll = useCallback(() => {
+  //   const container = containerRef.current;
+  //   if (!container) return;
 
-  // Attach scroll listener
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+  //   const isNearBottom =
+  //     container.scrollHeight - container.scrollTop - container.clientHeight < 80; // px threshold
+  //   setAutoScroll(isNearBottom);
+  // }, []);
 
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [handleScroll]);
+  // // Attach scroll listener
+  // useEffect(() => {
+  //   const container = containerRef.current;
+  //   if (!container) return;
 
-  // Auto-scroll only if user is near bottom
-  useEffect(() => {
-    if (autoScroll) scrollToBottom();
-  }, [messages, isLoading, autoScroll, scrollToBottom]);
+  //   container.addEventListener("scroll", handleScroll);
+  //   return () => container.removeEventListener("scroll", handleScroll);
+  // }, [handleScroll]);
+
+  // // Auto-scroll only if user is near bottom
+  // useEffect(() => {
+  //   if (autoScroll) scrollToBottom();
+  // }, [messages, isLoading, autoScroll, scrollToBottom]);
 
   // Fetch all past conversations for the sidebar
   useEffect(() => {
