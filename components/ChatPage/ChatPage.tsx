@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Sidebar from '../Sidebar';
 import ChatMessage from '../ChatMessage';
 import ChatInput from '../ChatInput';
-import ConversationFeedback from '../ConversationFeedback';
+import ChatMessagesContainer from './ChatMessagesContainer';
 import AuthContext from '../../contexts/AuthContext';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
 import { useConversations } from '../../hooks/useConversations';
@@ -278,8 +278,15 @@ const ChatPage: React.FC = () => {
     <div className="flex h-screen bg-gray-800 text-white">
       <Sidebar conversations={conversations} onNewChat={() => createNewConversation(navigate)} />
       <main className="flex flex-col flex-1 relative">
-        {/* Scroll Container */}
-        <div ref={containerRef} className="flex-1 overflow-y-auto p-6">
+        <ChatMessagesContainer
+          containerRef={containerRef}
+          messages={messages}
+          autoScroll={autoScroll}
+          messagesEndRef={messagesEndRef}
+          scrollToBottom={scrollToBottom}
+          setAutoScroll={setAutoScroll}
+        />
+        {/* <div ref={containerRef} className="flex-1 overflow-y-auto p-6">
           <div className="max-w-4xl mx-auto">
             {(!messages || messages.length === 0) ? (
               <div className="text-center mt-24">
@@ -310,15 +317,14 @@ const ChatPage: React.FC = () => {
                   </div>
                 )}
               
-                {/* Scroll Target */}
                 <div ref={messagesEndRef} />
               </div>
             )}
           </div>
-        </div>
+        </div> */}
         
         {/* Scroll to Bottom Button */}
-        {!autoScroll && (
+        {/* {!autoScroll && (
           <button
             onClick={() => {
               scrollToBottom();
@@ -341,16 +347,16 @@ const ChatPage: React.FC = () => {
               />
             </svg>
           </button>
-        )}
+        )} */}
 
         {/* Input Area */}
         <div className="p-6 bg-gray-800">
-            <div className="max-w-4xl mx-auto">
-                 <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
-                 <p className="text-xs text-center text-gray-500 mt-3">
-                    Chorah Labs ARI can make mistakes. Consider checking important information.
-                 </p>
-            </div>
+          <div className="max-w-4xl mx-auto">
+              <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
+              <p className="text-xs text-center text-gray-500 mt-3">
+                Chorah Labs ARI can make mistakes. Consider checking important information.
+              </p>
+          </div>
         </div>
       </main>
     </div>
