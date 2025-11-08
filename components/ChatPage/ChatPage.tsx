@@ -2,17 +2,18 @@
 import React, { useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import Sidebar from './Sidebar';
-import ChatMessage from './ChatMessage';
-import ChatInput from './ChatInput';
-import ConversationFeedback from './ConversationFeedback';
-import AuthContext from '../contexts/AuthContext';
-import { useAutoScroll } from '../hooks/useAutoScroll';
-import { useConversations } from '../hooks/useConversations';
-import { useMessages } from '../hooks/useMessages';
-import { BotIcon } from './icons';
-import { api, API_BASE_URL } from '../services/api';
-import type { Message, Conversation } from '../types';
+import Sidebar from '../Sidebar';
+import ChatMessage from '../ChatMessage';
+import ChatInput from '../ChatInput';
+import ConversationFeedback from '../ConversationFeedback';
+import AuthContext from '../../contexts/AuthContext';
+import { useAutoScroll } from '../../hooks/useAutoScroll';
+import { useConversations } from '../../hooks/useConversations';
+import { useMessages } from '../../hooks/useMessages';
+import { useChatStreaming } from '../../hooks/useChatStreaming';
+import { BotIcon } from '../icons';
+import { api, API_BASE_URL } from '../../services/api';
+import type { Message, Conversation } from '../../types';
 
 const ChatPage: React.FC = () => {
   const auth = useContext(AuthContext);
@@ -20,13 +21,10 @@ const ChatPage: React.FC = () => {
   const navigate = useNavigate();
 
   // === State ===
-
-
-  const assistantMessageIdRef = useRef<string | null>(null);
   const pendingNavigationIdRef = useRef<string | null>(null);
   
   
-  // --- Convresations ---
+  // --- Conversations ---
   const {
     conversations,
     setConversations,
@@ -44,7 +42,21 @@ const ChatPage: React.FC = () => {
   
   // --- Auto scrolling ---
   const { autoScroll, scrollToBottom, messagesEndRef, setAutoScroll } =
-  useAutoScroll(containerRef, messages, isLoading)
+    useAutoScroll(containerRef, messages, isLoading);
+
+  
+  // --- Chat Streaming ---
+  const { sendMessage } = useChatStreaming({
+    accessToken: auth?.accessToken,
+    conversationId,
+    tempConversationId,
+    setTempConversationId,
+    setConversations,
+    setPendingNavigationId,
+    setIsLoading,
+    setMessages,
+    navigate,
+  });
   
   // // Fetch all past conversations for the sidebar
   // useEffect(() => {
@@ -86,162 +98,162 @@ const ChatPage: React.FC = () => {
 
 
   // --- Handle sending a message and lazy conversation creation ---
-  const handleSendMessage = (query: string, tempId?: string) => {
-    if (!query.trim() || !auth?.accessToken) return;
+  // const handleSendMessage = (query: string, tempId?: string) => {
+  //   if (!query.trim() || !auth?.accessToken) return;
 
-    // Optimistic user message
-    const userMessage: Message = {
-      id: uuidv4(),
-      sender: "user",
-      content: query,
-      partial: "",
-      isStreaming: false,
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoading(true);
+    // // Optimistic user message
+    // const userMessage: Message = {
+    //   id: uuidv4(),
+    //   sender: "user",
+    //   content: query,
+    //   partial: "",
+    //   isStreaming: false,
+    // };
+    // setMessages(prev => [...prev, userMessage]);
+    // setIsLoading(true);
 
-    // Assistant placeholder
-    const newId = uuidv4();
-    assistantMessageIdRef.current = newId;
-    console.log("Assistant message ID assigned for streaming:", assistantMessageIdRef.current);
-    const assistantPlaceholder: Message = {
-      id: newId,
-      sender: "assistant",
-      content: "",
-      partial: "",
-      isStreaming: true,
-    };
-    setMessages(prev => [...prev, assistantPlaceholder]);
+    // // Assistant placeholder
+    // const newId = uuidv4();
+    // assistantMessageIdRef.current = newId;
+    // console.log("Assistant message ID assigned for streaming:", assistantMessageIdRef.current);
+    // const assistantPlaceholder: Message = {
+    //   id: newId,
+    //   sender: "assistant",
+    //   content: "",
+    //   partial: "",
+    //   isStreaming: true,
+    // };
+    // setMessages(prev => [...prev, assistantPlaceholder]);
 
     // Call backend
-    api
-      .streamQuery(
-        query,
-        auth.accessToken,
-        conversationId && !conversationId.startsWith("temp-")
-          ? conversationId
-          : tempId ?? null,
-        "cmc_docs",
-        (chunk) => {
+    // api
+    //   .streamQuery(
+    //     query,
+    //     auth.accessToken,
+    //     conversationId && !conversationId.startsWith("temp-")
+    //       ? conversationId
+    //       : tempId ?? null,
+    //     "cmc_docs",
+    //     (chunk) => {
           // Example: 
           //   { "conversation_id": "...", "title": "...", "updated_at": "..." }
           //   or { "choices": [ { "delta": { "content": "Hello" } } ] }
 
           // --- Handle conversation metadata from first message ---
-          if (chunk?.conversation_id && tempConversationId) {
-            setConversations(prev =>
-              prev.map(conv =>
-                conv.id === tempConversationId
-                  ? {
-                      id: chunk.conversation_id,
-                      title: chunk.title,
-                      updated_at: chunk.updated_at
-                    }
-                  : conv
-              )
-            );
-            setTempConversationId(null);
-            pendingNavigationIdRef.current = chunk.conversation_id; // Defer navigation until stream finishes
-            return;
-          }
+          // if (chunk?.conversation_id && tempConversationId) {
+          //   setConversations(prev =>
+          //     prev.map(conv =>
+          //       conv.id === tempConversationId
+          //         ? {
+          //             id: chunk.conversation_id,
+          //             title: chunk.title,
+          //             updated_at: chunk.updated_at
+          //           }
+          //         : conv
+          //     )
+          //   );
+          //   setTempConversationId(null);
+          //   pendingNavigationIdRef.current = chunk.conversation_id; // Defer navigation until stream finishes
+          //   return;
+          // }
 
           // --- Handle message_start event from backend (real message ID) ---
-          if (chunk?.event === "message_start" && chunk.message_id) {
-            const realId = chunk.message_id;
+          // if (chunk?.event === "message_start" && chunk.message_id) {
+          //   const realId = chunk.message_id;
 
-            // Replace temp assistant ID in message state with real ID
-            setMessages(prev =>
-              prev.map(msg =>
-                msg.id === assistantMessageIdRef.current
-                  ? { ...msg, id: realId }
-                  : msg
-              )
-            );
+          //   // Replace temp assistant ID in message state with real ID
+          //   setMessages(prev =>
+          //     prev.map(msg =>
+          //       msg.id === assistantMessageIdRef.current
+          //         ? { ...msg, id: realId }
+          //         : msg
+          //     )
+          //   );
 
-            // Update the ref so future delta chunks go to the correct message
-            assistantMessageIdRef.current = realId;
-            return;
-          }
+          //   // Update the ref so future delta chunks go to the correct message
+          //   assistantMessageIdRef.current = realId;
+          //   return;
+          // }
 
           // --- Handle streaming message content (delta chunks) ---
-          const currentMessageId = assistantMessageIdRef.current;
-          if (!currentMessageId) {
-            console.error("No assistantMessageId found in ref during streaming update.");
-            return;
-          }
+          // const currentMessageId = assistantMessageIdRef.current;
+          // if (!currentMessageId) {
+          //   console.error("No assistantMessageId found in ref during streaming update.");
+          //   return;
+          // }
           
-          const delta = chunk?.choices?.[0]?.delta?.content ?? "";
-          const finishReason = chunk?.choices?.[0]?.finish_reason ?? null;
+          // const delta = chunk?.choices?.[0]?.delta?.content ?? "";
+          // const finishReason = chunk?.choices?.[0]?.finish_reason ?? null;
           
-          console.log("Delta extracted for message streaming:", delta);
-          console.log("Finish reason:", finishReason);
+          // console.log("Delta extracted for message streaming:", delta);
+          // console.log("Finish reason:", finishReason);
           
-          if (delta) {
-            setMessages(prev => {
-              const found = prev.some(m => m.id ===currentMessageId);
-              console.log("[delta] Updating assistant message", { delta, found, prev });
-              return prev.map(msg =>
-                msg.id ===currentMessageId
-                ? {
-                  ...msg,
-                  partial: (msg.partial ?? "") + delta
-                }
-                : msg
-              );
-            });
-          }
+          // if (delta) {
+          //   setMessages(prev => {
+          //     const found = prev.some(m => m.id ===currentMessageId);
+          //     console.log("[delta] Updating assistant message", { delta, found, prev });
+          //     return prev.map(msg =>
+          //       msg.id ===currentMessageId
+          //       ? {
+          //         ...msg,
+          //         partial: (msg.partial ?? "") + delta
+          //       }
+          //       : msg
+          //     );
+          //   });
+          // }
           
-          if (finishReason === 'stop') {
-            console.log("Received finish_reason=stop - finalizing after render");
-            requestAnimationFrame(() => finalizeAssistantMessage());
-          }
-        },
-        () => {
-          console.log("Stream connection closed.");
-          requestAnimationFrame(() => finalizeAssistantMessage());
-        }
-      )
-      .catch((err) => {
-        console.error("Failed to fetch stream:", err);
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageIdRef.current
-            ? {
-                ...msg,
-                content: "Sorry, something went wrong.",
-                partial: "",
-                isStreaming: false,
-              }
-            : msg
-          )
-        );
-        setIsLoading(false);
-      });
+          // if (finishReason === 'stop') {
+          //   console.log("Received finish_reason=stop - finalizing after render");
+          //   requestAnimationFrame(() => finalizeAssistantMessage());
+          // }
+        // },
+        // () => {
+          // console.log("Stream connection closed.");
+          // requestAnimationFrame(() => finalizeAssistantMessage());
+      //   }
+      // )
+      // .catch((err) => {
+      //   console.error("Failed to fetch stream:", err);
+      //   setMessages((prev) =>
+      //     prev.map((msg) =>
+      //       msg.id === assistantMessageIdRef.current
+      //       ? {
+      //           ...msg,
+      //           content: "Sorry, something went wrong.",
+      //           partial: "",
+      //           isStreaming: false,
+      //         }
+      //       : msg
+      //     )
+      //   );
+      //   setIsLoading(false);
+      // });
   
-    const finalizeAssistantMessage = () => {
-      console.log("[finalizeAssistantMessage] Finalizing...")
-      const currentId = assistantMessageIdRef.current;
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.partial
-            ? {
-                ...msg,
-                content: msg.content + (msg.partial ?? "").trim(),
-                partial: "",
-                isStreaming: false,
-              }
-            : msg
-        )
-      );
-      setIsLoading(false);
+    // const finalizeAssistantMessage = () => {
+    //   console.log("[finalizeAssistantMessage] Finalizing...")
+    //   const currentId = assistantMessageIdRef.current;
+    //   setMessages(prev =>
+    //     prev.map(msg =>
+    //       msg.partial
+    //         ? {
+    //             ...msg,
+    //             content: msg.content + (msg.partial ?? "").trim(),
+    //             partial: "",
+    //             isStreaming: false,
+    //           }
+    //         : msg
+    //     )
+    //   );
+    //   setIsLoading(false);
 
-      if (pendingNavigationIdRef.current) {
-        const conversation_id = pendingNavigationIdRef.current;
-        pendingNavigationIdRef.current = null;
-        requestAnimationFrame(() => navigate(`/chat/${conversation_id}`));
-      }
-    }
-  };
+    //   if (pendingNavigationIdRef.current) {
+    //     const conversation_id = pendingNavigationIdRef.current;
+    //     pendingNavigationIdRef.current = null;
+    //     requestAnimationFrame(() => navigate(`/chat/${conversation_id}`));
+    //   }
+    // }
+  // };
 
   // // --- Handle creating new chat ---
   // const handleNewChat = () => {
@@ -334,7 +346,7 @@ const ChatPage: React.FC = () => {
         {/* Input Area */}
         <div className="p-6 bg-gray-800">
             <div className="max-w-4xl mx-auto">
-                 <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+                 <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
                  <p className="text-xs text-center text-gray-500 mt-3">
                     Chorah Labs ARI can make mistakes. Consider checking important information.
                  </p>
