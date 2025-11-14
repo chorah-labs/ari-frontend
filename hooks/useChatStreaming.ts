@@ -6,28 +6,37 @@ import { api } from '../services/api';
 export const useChatStreaming = ({
   accessToken,
   conversationId,
+  setConversations,
   tempConversationId,
   setTempConversationId,
-  setConversations,
-  setPendingNavigationId,
   setIsLoading,
   setMessages,
   navigate,
 }: {
   accessToken: string;
   conversationId: string | null;
+  setConversations: Function;
   tempConversationId: string | null;
   setTempConversationId: Function;
-  setConversations: Function;
-  setPendingNavigationId: Function;
   setIsLoading: Function;
   setMessages: Function;
   navigate: Function;
 }) => {
   const assistantMessageIdRef = useRef<string | null>(null);
-  const sendMessage = useCallback((query: string, tempId?: string) => {
+  const realConversationIdRef = useRef<string | null>(null);
+
+  const sendMessage = useCallback((query: string) => {
     if (!query.trim() || !accessToken) return;
     setIsLoading(true);
+
+    // let activeConversationId = conversationId ?? tempConversationId;
+    // if (!activeConversationId) {
+    //   const newTempId = `temp-${Date.now()}`;
+    //   setTempConversationId(newTempId);
+    //   activeConversationId = newTempId;
+    // }
+
+    // console.log("[useChatStreaming.sendMessage] Active Conversation ID:", activeConversationId);
 
     // Optimistic user + assistant message placeholders
     const userMessage = { id: uuidv4(), sender: "user", content: query, partial: "", isStreaming: false };
@@ -37,7 +46,6 @@ export const useChatStreaming = ({
 
     const finalizeAssistantMessage = () => {
       console.log("[useChatStreaming.finalizeAssistantMessage] Finalizing...");
-      const currentId = assistantMessageIdRef.current;
       setMessages(prev => prev.map(msg =>
         msg.partial
           ? { ...msg, content: (msg.content ?? "") + (msg.partial ?? "").trim(), partial: "", isStreaming: false }
@@ -45,47 +53,41 @@ export const useChatStreaming = ({
       ));
       setIsLoading(false);
 
-      if (setPendingNavigationId) {
-        requestAnimationFrame(() => {
-          const navId = setPendingNavigationId(null);
-          if (navId) navigate(`/chat/$(navId)`);
-        });
+      if (realConversationIdRef.current) {
+        console.log("[useChatStreaming] Navigating to real conversation:", realConversationIdRef.current);
+        setTimeout(() => navigate(`/chat/${realConversationIdRef.current}`), 100);
       }
     };
 
     api.streamQuery(
       query,
       accessToken,
-      conversationId && !conversationId.startsWith("temp-") ? conversationId : tempId ?? null,
+      conversationId,
       "cmc_docs",
       (chunk) => {
         // === Handle Stream events ===
-
+        console.log("[useChatStreaming.api.streamQuery] Current activeConversationId:", conversationId);
         // --- Handle conversation metadata chunk ---
-        if (chunk?.conversation_id && tempConversationId) {
-          setConversations(prev =>
-            prev.map(conv =>
-              conv.id === tempConversationId
-                ? { id: chunk.conversation_id, title: chunk.title, updated_at: chunk.updated_at }
-                : conv
-            )
-          );
-          setTempConversationId(null);
-          setPendingNavigationId(chunk.conversation_id);
-          return;
+        if (chunk?.conversation_id) {
+          realConversationIdRef.current = chunk.conversation_id;
+          setConversations(prev => prev.map(conv =>
+            conv.id === tempConversationId
+              ? { ...conv, id: chunk.conversation_id, title: chunk.title, updated_at: chunk.updated_at }
+              : conv
+          ));
         }
 
         // --- Handle message_start event ---
         if (chunk?.event === "message_start" && chunk.message_id) {
-          const realId = chunk.message_id;
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === assistantMessageIdRef.current
-                ? { ...msg, id: realId }
-                : msg
-            )
-          );
-          assistantMessageIdRef.current = realId;
+          // const realId = chunk.message_id;
+          // setMessages(prev =>
+          //   prev.map(msg =>
+          //     msg.id === assistantMessageIdRef.current
+          //       ? { ...msg, id: realId }
+          //       : msg
+          //   )
+          // );
+          assistantMessageIdRef.current = chunk.message_id;
           return;
         }
 
@@ -93,13 +95,15 @@ export const useChatStreaming = ({
         const delta = chunk?.choices?.[0]?.delta?.content ?? "";
         const finishReason = chunk?.choices?.[0]?.finish_reason ?? null;
         if (delta) {
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === assistantMessageIdRef.current
+          setMessages(prev => {
+            const updated = prev.map(msg =>
+              msg.id === assistantMessage.id
                 ? { ...msg, partial: (msg.partial ?? "") + delta }
                 : msg
-            )
-          );
+            );
+            console.log("[DEBUG][useChatStreaming] Updated messages state:", updated);
+            return updated;
+          });
         }
 
         if (finishReason === "stop") {
@@ -112,14 +116,18 @@ export const useChatStreaming = ({
       console.error("Stream failed:", err);
       setMessages(prev =>
         prev.map(msg =>
-          msg.id === assistantMessageIdRef.current
+          msg.id === assistantMessage.id
             ? { ...msg, content: "Sorry, something went wrong.", partial: "", isStreaming: false }
             : msg
         )
       );
       setIsLoading(false);
     });
-  }, [accessToken, conversationId]);
+  },
+  [
+    accessToken,
+    conversationId,
+  ]);
 
   return { sendMessage };
 };

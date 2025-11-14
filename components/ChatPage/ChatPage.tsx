@@ -17,25 +17,20 @@ import type { Message, Conversation } from '../../types';
 
 const ChatPage: React.FC = () => {
   const auth = useContext(AuthContext);
-  const { conversationId: paramId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
-
-  // === State ===
-  const pendingNavigationIdRef = useRef<string | null>(null);
-  
+  const { conversationId: paramId } = useParams<{ conversationId: string }>();
+  const [tempConversationId, setTempConversationId] = useState<string | null>(
+    !paramId ? `temp-${Date.now()}` : null
+  );
+  const conversationId = paramId ?? tempConversationId;
   
   // --- Conversations ---
   const {
     conversations,
     setConversations,
-    tempConversationId,
-    setTempConversationId,
-    pendingNavigationId,
-    setPendingNavigationId,
     createNewConversation
-  } = useConversations(auth?.accessToken)
+  } = useConversations(auth?.accessToken, tempConversationId, setTempConversationId)
   
-  const conversationId = paramId ?? tempConversationId;
   const { messages, setMessages } = useMessages(conversationId, auth?.accessToken);
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,16 +42,27 @@ const ChatPage: React.FC = () => {
   
   // --- Chat Streaming ---
   const { sendMessage } = useChatStreaming({
-    accessToken: auth?.accessToken,
+    accessToken: auth?.accessToken!,
     conversationId,
+    setConversations,
     tempConversationId,
     setTempConversationId,
-    setConversations,
-    setPendingNavigationId,
     setIsLoading,
     setMessages,
     navigate,
   });
+
+  useEffect(() => {
+    if (!paramId) {
+      console.log("[ChatPage] Resetting chat page for new conversation...");
+      setMessages([]);
+      setIsLoading(false);
+    }
+  }, [paramId, setMessages]);
+
+  useEffect(() => {
+    console.log("[ChatPage] Messages updated:", messages);
+  }, [messages]);
   
   // // Fetch all past conversations for the sidebar
   // useEffect(() => {
@@ -91,10 +97,6 @@ const ChatPage: React.FC = () => {
   //       setMessages([]); // fallback to empty array
   //     });
   // }, [auth?.accessToken, conversationId]);
-
-  useEffect(() => {
-    console.log("Messages state updated:", messages);
-  }, [messages]);
 
 
   // --- Handle sending a message and lazy conversation creation ---

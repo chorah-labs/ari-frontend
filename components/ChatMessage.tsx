@@ -43,8 +43,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLastAssistant = fa
     );
   }
 
-  {/* Debug: log final markdown content */}
-  {isStreaming === false && console.log("Final markdown content:", content)}
+  // {/* Debug: log final markdown content */}
+  // {isStreaming === false && console.log("Final markdown content:", content)}
 
   const fullContent = content + (partial ?? "");
 
