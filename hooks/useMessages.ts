@@ -14,7 +14,6 @@ export const useMessages = (conversationId: string | null, accessToken: string |
     if (prevIdRef.current?.startsWith("temp-") && !conversationId.startsWith("temp-")) {
       prevIdRef.current = conversationId;
       console.log("[useMessages] Switched from temp to real conversation, prevIdRef is now:", conversationId);
-      return;
     }
 
     if (conversationId.startsWith("temp-")) {
