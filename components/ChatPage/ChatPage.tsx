@@ -61,7 +61,10 @@ const ChatPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-800 text-white">
-      <Sidebar conversations={conversations} onNewChat={() => createNewConversation(navigate)} />
+      <Sidebar
+        conversations={conversations}
+        onNewChat={() => createNewConversation(navigate)}
+      />
       <main className="flex flex-col flex-1 relative">
         <ChatMessagesContainer
           containerRef={containerRef}
