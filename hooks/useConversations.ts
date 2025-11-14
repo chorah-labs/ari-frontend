@@ -22,12 +22,12 @@ export const useConversations = (
 
   // Handle creating new conversation
   const createNewConversation = (navigate: (path: string) => void) => {
-    const tempId = `temp-${Date.now()}`;
-    setTempConversationId(tempId);
-    setConversations(prev => [
-      {id: tempId, title: "New Conversation", updated_at: new Date().toISOString() },
-      ...prev
-    ]);
+    // const tempId = `temp-${Date.now()}`;
+    // setTempConversationId(tempId);
+    // setConversations(prev => [
+    //   {id: tempId, title: "New Conversation", updated_at: new Date().toISOString() },
+    //   ...prev
+    // ]);
     navigate(`/chat`)
   };
 
