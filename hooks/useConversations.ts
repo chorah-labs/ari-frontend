@@ -13,23 +13,27 @@ export const useConversations = (
 
   // Fetch all past conversations for the sidebar
   useEffect(() => {
-  if (!accessToken) return;
-  api
-    .getConversations(accessToken)
-    .then(res => setConversations(res.conversations))
-    .catch(error => console.error("Failed to fetch conversations:", error));
+    if (!accessToken) return;
+    api
+      .getConversations(accessToken)
+      .then(res => setConversations(res.conversations))
+      .catch(error => console.error("Failed to fetch conversations:", error));
   }, [accessToken]);
 
   // Handle creating new conversation
   const createNewConversation = (navigate: (path: string) => void) => {
+    if (!tempConversationId) {
+      setTempConversationId(`temp-${Date.now()}`);
+      console.log("[useConversations] Creating new tempConversationId:", tempConversationId);
+    }
     navigate(`/chat`)
   };
 
   return {
     conversations,
     setConversations,
-    tempConversationId,
-    setTempConversationId,
+    // tempConversationId,
+    // setTempConversationId,
     createNewConversation
   };
 };

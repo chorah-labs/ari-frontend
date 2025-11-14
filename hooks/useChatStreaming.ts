@@ -35,6 +35,19 @@ export const useChatStreaming = ({
     assistantMessageIdRef.current = assistantMessage.id;
     setMessages(prev => [...prev, userMessage, assistantMessage]);
 
+    if (conversationId?.startsWith("temp-")) {
+      console.log("[useChatStreaming] New conversation created with temp ID:", conversationId);
+      setConversations(prev => {
+        if (!prev.some(c => c.id === conversationId)) {
+          return [
+            { id: conversationId, title: "New Conversation", updated_at: new Date().toISOString() },
+            ...prev
+          ];
+        }
+        return prev;
+      });
+    }
+
     const finalizeAssistantMessage = () => {
       console.log("[useChatStreaming.finalizeAssistantMessage] Finalizing...");
       setMessages(prev => prev.map(msg =>
@@ -58,14 +71,38 @@ export const useChatStreaming = ({
       (chunk) => {
         // === Handle Stream events ===
         console.log("[useChatStreaming.api.streamQuery] Current activeConversationId:", conversationId);
-        // --- Handle conversation metadata chunk ---
+        // if (conversationId?.startsWith("temp-")) {
+        //   console.log("[useChatStreaming] New conversation created with temp ID:", conversationId);
+        //   setConversations(prev => {
+        //     if (!prev.some(c => c.id === conversationId)) {
+        //       return [
+        //         { id: conversationId, title: "New Conversation", updated_at: new Date().toISOString() },
+        //         ...prev
+        //       ];
+        //     }
+        //     return prev;
+        //   });
+        // }
+        // --- Handle conversation id chunk ---
         if (chunk?.conversation_id) {
           realConversationIdRef.current = chunk.conversation_id;
           setConversations(prev => prev.map(conv =>
-            conv.id === tempConversationId
+            conv.id === conversationId
               ? { ...conv, id: chunk.conversation_id, title: chunk.title, updated_at: chunk.updated_at }
               : conv
           ));
+          console.log("[useChatStreaming] Updated realConversationIdRef to:", chunk.conversation_id);
+          setTempConversationId(null);
+        }
+
+        // --- Handle conversation title chunk ---
+        if (chunk?.event === "conversation_title_update" && chunk.title) {
+          setConversations(prev => prev.map(conv =>
+            conv.id === chunk.conversation_id
+              ? { ...conv, title: chunk.title }
+              : conv
+          ));
+          console.log("[useChatStreaming] Updated conversation title to:", chunk.title);
         }
 
         // --- Handle message_start event ---
