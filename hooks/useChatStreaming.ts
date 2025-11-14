@@ -29,15 +29,6 @@ export const useChatStreaming = ({
     if (!query.trim() || !accessToken) return;
     setIsLoading(true);
 
-    // let activeConversationId = conversationId ?? tempConversationId;
-    // if (!activeConversationId) {
-    //   const newTempId = `temp-${Date.now()}`;
-    //   setTempConversationId(newTempId);
-    //   activeConversationId = newTempId;
-    // }
-
-    // console.log("[useChatStreaming.sendMessage] Active Conversation ID:", activeConversationId);
-
     // Optimistic user + assistant message placeholders
     const userMessage = { id: uuidv4(), sender: "user", content: query, partial: "", isStreaming: false };
     const assistantMessage = { id: uuidv4(), sender: "assistant", content: "", partial: "", isStreaming: true };
@@ -79,14 +70,6 @@ export const useChatStreaming = ({
 
         // --- Handle message_start event ---
         if (chunk?.event === "message_start" && chunk.message_id) {
-          // const realId = chunk.message_id;
-          // setMessages(prev =>
-          //   prev.map(msg =>
-          //     msg.id === assistantMessageIdRef.current
-          //       ? { ...msg, id: realId }
-          //       : msg
-          //   )
-          // );
           assistantMessageIdRef.current = chunk.message_id;
           return;
         }
