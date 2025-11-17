@@ -40,7 +40,7 @@ export const useChatStreaming = ({
       setConversations(prev => {
         if (!prev.some(c => c.id === conversationId)) {
           return [
-            { id: conversationId, title: "New Conversation", updated_at: new Date().toISOString() },
+            { id: conversationId, title: "New Conversation", updated_at: new Date().toISOString(), isStreamingTitle: true },
             ...prev
           ];
         }
@@ -84,7 +84,7 @@ export const useChatStreaming = ({
         //   });
         // }
         // --- Handle conversation id chunk ---
-        if (chunk?.conversation_id) {
+        if (chunk?.event === "conversation_metadata" && chunk.conversation_id) {
           realConversationIdRef.current = chunk.conversation_id;
           setConversations(prev => prev.map(conv =>
             conv.id === conversationId
@@ -99,7 +99,7 @@ export const useChatStreaming = ({
         if (chunk?.event === "conversation_title_update" && chunk.title) {
           setConversations(prev => prev.map(conv =>
             conv.id === chunk.conversation_id
-              ? { ...conv, title: chunk.title }
+              ? { ...conv, title: chunk.title, isStreamingTitle: false }
               : conv
           ));
           console.log("[useChatStreaming] Updated conversation title to:", chunk.title);
