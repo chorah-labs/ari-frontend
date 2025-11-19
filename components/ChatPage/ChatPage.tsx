@@ -13,8 +13,8 @@ import { useChatStreaming } from '../../hooks/useChatStreaming';
 
 const ChatPage: React.FC = () => {
   const auth = useContext(AuthContext);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [hasMounted, setHasMounted] = useState(false);
+
+  
   const navigate = useNavigate();
   const { conversationId: paramId } = useParams<{ conversationId: string }>();
   const [tempConversationId, setTempConversationId] = useState<string | null>(
@@ -35,8 +35,8 @@ const ChatPage: React.FC = () => {
   
   // --- Auto scrolling ---
   const { autoScroll, scrollToBottom, messagesEndRef, setAutoScroll } =
-    useAutoScroll(containerRef, messages, isLoading);
-
+  useAutoScroll(containerRef, messages, isLoading);
+  
   
   // --- Chat Streaming ---
   const { sendMessage } = useChatStreaming({
@@ -49,7 +49,7 @@ const ChatPage: React.FC = () => {
     setMessages,
     navigate,
   });
-
+  
   useEffect(() => {
     if (!paramId) {
       console.log("[ChatPage] Resetting chat page for new conversation...");
@@ -57,19 +57,42 @@ const ChatPage: React.FC = () => {
       setIsLoading(false);
     }
   }, [paramId, setMessages]);
-
+  
   useEffect(() => {
     console.log("[ChatPage] Messages updated:", messages);
   }, [messages]);
+  
+  // Sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [userToggled, setUserToggled] = useState(false);
 
+  // Prevent slide-in animations on initial load
+  const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
-      // Ensures main components don't use slide-in animation on initial load
       setHasMounted(true);
     });
     return () => cancelAnimationFrame(raf);  // Cleanup on unmount
   }, []);
 
+  // Autoclose sidebar on mobile by default
+  useEffect(() => {
+    const handleResize = () => {
+      if (!userToggled) {
+        if (window.innerWidth < 768) setSidebarOpen(false);
+        else setSidebarOpen(true);
+      }
+    };
+    handleResize(); // Set initial state
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [userToggled])
+
+  const toggleSidebar = () => {
+    setSidebarOpen(prev => !prev);
+    setUserToggled(true);
+  };
+  
   return (
     <div className="flex h-screen bg-gray-800 text-white">
 
@@ -79,12 +102,12 @@ const ChatPage: React.FC = () => {
           absolute left-0 top-0 h-full
           ${hasMounted ? "transition-transform duration-300" : ""}
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-        `}
-      >
+          `}
+          >
         <Sidebar
           conversations={conversations}
           onNewChat={() => createNewConversation(navigate)}
-          onCloseSidebar={() => setSidebarOpen(false)}
+          onCloseSidebar={toggleSidebar}
         />
       </div>
 
@@ -98,7 +121,7 @@ const ChatPage: React.FC = () => {
         {/* Button to reopen the sidebar when collapsed */}
         {!sidebarOpen && (
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={toggleSidebar}
             className="absolute top-4 left-4 p-2 bg-gray-700 rounded-lg hover:bg-gray-600 z-20"
           >
             <SidebarIcon className="w-5 h-5" />
