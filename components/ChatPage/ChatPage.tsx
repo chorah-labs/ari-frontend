@@ -14,6 +14,7 @@ import { useChatStreaming } from '../../hooks/useChatStreaming';
 const ChatPage: React.FC = () => {
   const auth = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [hasMounted, setHasMounted] = useState(false);
   const navigate = useNavigate();
   const { conversationId: paramId } = useParams<{ conversationId: string }>();
   const [tempConversationId, setTempConversationId] = useState<string | null>(
@@ -61,27 +62,49 @@ const ChatPage: React.FC = () => {
     console.log("[ChatPage] Messages updated:", messages);
   }, [messages]);
 
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      // Ensures main components don't use slide-in animation on initial load
+      setHasMounted(true);
+    });
+    return () => cancelAnimationFrame(raf);  // Cleanup on unmount
+  }, []);
+
   return (
     <div className="flex h-screen bg-gray-800 text-white">
-      {sidebarOpen && (
+
+      {/* Sidebar container with slide animation */}
+      <div
+        className={`
+          absolute left-0 top-0 h-full
+          ${hasMounted ? "transition-transform duration-300" : ""}
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+      >
         <Sidebar
           conversations={conversations}
           onNewChat={() => createNewConversation(navigate)}
           onCloseSidebar={() => setSidebarOpen(false)}
         />
-      )}
+      </div>
 
-      <main className="flex flex-col flex-1 relative">
+      <main
+        className={`
+          flex flex-col flex-1 relative
+          ${hasMounted ? "transition-all duration-300" : ""}
+          ${sidebarOpen ? "ml-64" : "ml-0"}
+        `}
+      >
         {/* Button to reopen the sidebar when collapsed */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="absolute top-4 left-4 p-2 bg-gray-700 rounded-lg hover:bg-gray-600"
+            className="absolute top-4 left-4 p-2 bg-gray-700 rounded-lg hover:bg-gray-600 z-20"
           >
-            <SidebarIcon className="w-5 h-5"/>
+            <SidebarIcon className="w-5 h-5" />
           </button>
         )}
-        
+
         <ChatMessagesContainer
           containerRef={containerRef}
           messages={messages}

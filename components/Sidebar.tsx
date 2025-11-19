@@ -14,7 +14,7 @@ const Sidebar: React.FC<SidebarProps> = ({ conversations, onNewChat, onCloseSide
   const { logout } = useAuth();
 
   return (
-    <aside className="w-64 bg-gray-900 p-4 flex flex-col">
+    <aside className="w-64 bg-gray-900 p-4 flex flex-col h-full">
       <div className="flex items-center justify-between mb-6 border-b border-gray-700 pb-4">
         <div className="flex items-center">
           <BotIcon className="w-8 h-8 text-indigo-400 mr-3" />
