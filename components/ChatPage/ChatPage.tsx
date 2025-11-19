@@ -1,6 +1,7 @@
 
 import React, { useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { SidebarIcon } from '../icons';
 import Sidebar from '../Sidebar';
 import ChatInput from '../ChatInput';
 import ChatMessagesContainer from './ChatMessagesContainer';
@@ -12,6 +13,7 @@ import { useChatStreaming } from '../../hooks/useChatStreaming';
 
 const ChatPage: React.FC = () => {
   const auth = useContext(AuthContext);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const { conversationId: paramId } = useParams<{ conversationId: string }>();
   const [tempConversationId, setTempConversationId] = useState<string | null>(
@@ -61,11 +63,25 @@ const ChatPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-800 text-white">
-      <Sidebar
-        conversations={conversations}
-        onNewChat={() => createNewConversation(navigate)}
-      />
+      {sidebarOpen && (
+        <Sidebar
+          conversations={conversations}
+          onNewChat={() => createNewConversation(navigate)}
+          onCloseSidebar={() => setSidebarOpen(false)}
+        />
+      )}
+
       <main className="flex flex-col flex-1 relative">
+        {/* Button to reopen the sidebar when collapsed */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="absolute top-4 left-4 p-2 bg-gray-700 rounded-lg hover:bg-gray-600"
+          >
+            <SidebarIcon className="w-5 h-5"/>
+          </button>
+        )}
+        
         <ChatMessagesContainer
           containerRef={containerRef}
           messages={messages}

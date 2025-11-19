@@ -1,22 +1,33 @@
 
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { PlusIcon, LogoutIcon, BotIcon } from './icons';
+import { PlusIcon, LogoutIcon, BotIcon, SidebarIcon } from './icons';
 import type { Conversation } from '../types';
 
 interface SidebarProps {
   conversations: Conversation[];
   onNewChat: () => void;
+  onCloseSidebar: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ conversations, onNewChat }) => {
+const Sidebar: React.FC<SidebarProps> = ({ conversations, onNewChat, onCloseSidebar }) => {
   const { logout } = useAuth();
 
   return (
     <aside className="w-64 bg-gray-900 p-4 flex flex-col">
-      <div className="flex items-center mb-6 border-b border-gray-700 pb-4">
-        <BotIcon className="w-8 h-8 text-indigo-400 mr-3" />
-        <h1 className="text-xl font-bold">Chorah Labs ARI</h1>
+      <div className="flex items-center justify-between mb-6 border-b border-gray-700 pb-4">
+        <div className="flex items-center">
+          <BotIcon className="w-8 h-8 text-indigo-400 mr-3" />
+          <h1 className="text-l font-bold">Chorah Labs ARI</h1>
+        </div>
+
+        {/* Collapse button */}
+        <button
+          onClick={onCloseSidebar}
+          className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          <SidebarIcon className="w-5 h-5 text-gray-300" />
+        </button>
       </div>
   
       <button 
