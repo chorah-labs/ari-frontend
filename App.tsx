@@ -5,7 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import BackendWakeUp from './components/BackendWakeup';
 import AuthPage from './components/AuthPage';
-import ChatPage from './components/ChatPage';
+import ChatPage from './components/ChatPage/ChatPage';
 import EmailConfirmationPage from './components/EmailConfirmationPage';
 import EmailVerifiedPage from './components/EmailVerifiedPage';
 
