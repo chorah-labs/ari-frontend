@@ -10,7 +10,8 @@ interface MarkdownMessageProps {
 
 export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content }) => {
   return (
-    <div className="prose prose-invert max-w-none text-gray-100 dark:prose-invert">
+    <div className="prose prose-invert max-w-full text-gray-100 dark:prose-invert 
+      [&_pre]:max-w-full [&_pre]:overflow-x-auto">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}

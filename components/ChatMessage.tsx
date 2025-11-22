@@ -32,7 +32,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLastAssistant = fa
           <Icon className="w-5 h-5 text-white" />
         </div>
 
-        <div className="rounded-lg p-4 max-w-xl break-words bg-blue-600 text-white ml-auto font-mono whitespace-pre-wrap">
+        <div className="rounded-lg p-4 max-w-full md:max-w-xl break-words bg-blue-600 text-white ml-auto whitespace-pre-wrap">
           {content}
         </div>
       </div>
@@ -53,7 +53,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isLastAssistant = fa
       </div>
 
       {/* Message + Feedback */}
-      <div className="flex-1 break-words">
+      <div className="flex-1 max-w-full break-words overflow-hidden">
         <MarkdownMessage content={fullContent} />
         {isStreaming && partial && <span className="text-gray-400 font-mono animate-pulse">▍</span>}
 
