@@ -113,7 +113,7 @@ const ChatPage: React.FC = () => {
 
       <main
         className={`
-          flex flex-col flex-1 relative
+          flex flex-col flex-1 relative overflow-y-auto overflow-x-hidden p-6
           ${hasMounted ? "transition-all duration-300" : ""}
           ${sidebarOpen ? "ml-64" : "ml-0"}
         `}
