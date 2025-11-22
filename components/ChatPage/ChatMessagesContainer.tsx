@@ -2,7 +2,7 @@ import { BotIcon } from '../icons';
 import ChatMessage from '../ChatMessage';
 
 const ChatMessagesContainer = ({ containerRef, messages, autoScroll, messagesEndRef, scrollToBottom, setAutoScroll }) => (
-  <div ref={containerRef} className="flex-1 overflow-y-auto p-6">
+  <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6">
     <div className="max-w-4xl mx-auto">
       {!messages.length ? (
         <div className="text-center mt-24">
