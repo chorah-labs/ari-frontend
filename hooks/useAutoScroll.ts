@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Message } from '../types';
 
-export const useAutoScroll = (containerRef: React.RefObject<HTMLDivElement>, messages: Message[], isloading: boolean) => {
+export const useAutoScroll = (containerRef: React.RefObject<HTMLDivElement>, messages: Message[], isLoading: boolean) => {
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +25,7 @@ export const useAutoScroll = (containerRef: React.RefObject<HTMLDivElement>, mes
 
   useEffect(() => {
     if (autoScroll) scrollToBottom();
-  }, [messages, isloading, autoScroll, scrollToBottom]);
+  }, [messages, isLoading, autoScroll, scrollToBottom]);
 
   return { autoScroll, scrollToBottom, messagesEndRef, setAutoScroll };
 };

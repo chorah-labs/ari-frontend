@@ -35,7 +35,7 @@ const AppRoutes: React.FC = () => {
     <Routes>
       {/* Auth routes */}
       <Route path="/auth" element={<AuthPage />} />
-      <Route path="check-email" element={<EmailConfirmationPage />} />
+      <Route path="/check-email" element={<EmailConfirmationPage />} />
       <Route path="/email-verified" element={<EmailVerifiedPage />} />
 
       {/* Protected routes */}
