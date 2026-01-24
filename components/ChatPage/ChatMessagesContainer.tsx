@@ -1,7 +1,25 @@
+import React from 'react';
 import { BotIcon } from '../icons';
 import ChatMessage from '../ChatMessage';
+import { Message } from '../../types';
 
-const ChatMessagesContainer = ({ containerRef, messages, autoScroll, messagesEndRef, scrollToBottom, setAutoScroll }) => (
+interface ChatMessagesContainerProps {
+  containerRef: React.RefObject<HTMLDivElement>;
+  messages: Message[];
+  autoScroll: boolean;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+  scrollToBottom: (smooth?: boolean) => void;
+  setAutoScroll: (value: boolean) => void;
+}
+
+const ChatMessagesContainer: React.FC<ChatMessagesContainerProps> = ({
+  containerRef,
+  messages,
+  autoScroll,
+  messagesEndRef,
+  scrollToBottom,
+  setAutoScroll
+}) => (
   <div ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6">
     <div className="max-w-4xl mx-auto">
       {!messages.length ? (

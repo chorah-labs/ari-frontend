@@ -1,7 +1,6 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import {markdownComponents as codeComponent } from "./markdownComponents";
 
 interface MarkdownMessageProps {
@@ -14,7 +13,6 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content }) => 
       [&_pre]:max-w-full [&_pre]:overflow-x-auto">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
         components={{
           h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
           h2: ({ children }) => <h2 className="text-lg font-bold mb-2">{children}</h2>,

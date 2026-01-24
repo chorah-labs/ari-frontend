@@ -5,6 +5,8 @@ import { api } from '../services/api';
 
 export const useMessages = (conversationId: string | null, accessToken: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const prevIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -13,34 +15,38 @@ export const useMessages = (conversationId: string | null, accessToken: string |
     // Preserve messages if we're switching from temp to real conversation
     if (prevIdRef.current?.startsWith("temp-") && !conversationId.startsWith("temp-")) {
       prevIdRef.current = conversationId;
-      console.log("[useMessages] Switched from temp to real conversation, prevIdRef is now:", conversationId);
+      return;
     }
 
     if (conversationId.startsWith("temp-")) {
       setMessages([]);
       prevIdRef.current = conversationId;
-      console.log("[useMessages] conversationId is temp, cleared messages and set prevIdRef to:", conversationId);
       return;
     }
 
+    setIsLoadingMessages(true);
+    setMessagesError(null);
     api
       .getConversationMessages(conversationId, accessToken)
       .then((data: Message[]) => {
-        // data is already an array
         const normalized = data.map(msg => ({
           ...msg,
-          id: msg.id?.toString() ?? uuidv4(), // ensure unique ID for React key
+          id: msg.id?.toString() ?? uuidv4(),
           content: msg.content ?? '',
           partial: '',
           isStreaming: false,
-        })).reverse(); // show oldest first
+        })).reverse();
         setMessages(normalized);
       })
-      .catch(error => console.error("Failed to fetch messages:", error));
+      .catch(error => {
+        console.error("Failed to fetch messages:", error);
+        setMessagesError("Failed to load messages");
+      })
+      .finally(() => setIsLoadingMessages(false));
 
     prevIdRef.current = conversationId;
 
   }, [conversationId, accessToken]);
 
-  return { messages, setMessages };
+  return { messages, setMessages, messagesError, isLoadingMessages };
 };

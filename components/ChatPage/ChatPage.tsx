@@ -1,18 +1,18 @@
 
-import React, { useContext, useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SidebarIcon } from '../icons';
 import Sidebar from '../Sidebar';
 import ChatInput from '../ChatInput';
 import ChatMessagesContainer from './ChatMessagesContainer';
-import AuthContext from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
 import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChatStreaming } from '../../hooks/useChatStreaming';
 
 const ChatPage: React.FC = () => {
-  const auth = useContext(AuthContext);
+  const { accessToken } = useAuth();
 
   
   const navigate = useNavigate();
@@ -27,9 +27,9 @@ const ChatPage: React.FC = () => {
     conversations,
     setConversations,
     createNewConversation
-  } = useConversations(auth?.accessToken, tempConversationId, setTempConversationId)
-  
-  const { messages, setMessages } = useMessages(conversationId, auth?.accessToken);
+  } = useConversations(accessToken, tempConversationId, setTempConversationId)
+
+  const { messages, setMessages } = useMessages(conversationId, accessToken);
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -40,7 +40,7 @@ const ChatPage: React.FC = () => {
   
   // --- Chat Streaming ---
   const { sendMessage } = useChatStreaming({
-    accessToken: auth?.accessToken!,
+    accessToken: accessToken!,
     conversationId,
     setConversations,
     tempConversationId,
@@ -52,15 +52,10 @@ const ChatPage: React.FC = () => {
   
   useEffect(() => {
     if (!paramId) {
-      console.log("[ChatPage] Resetting chat page for new conversation...");
       setMessages([]);
       setIsLoading(false);
     }
   }, [paramId, setMessages]);
-  
-  useEffect(() => {
-    console.log("[ChatPage] Messages updated:", messages);
-  }, [messages]);
   
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(true);

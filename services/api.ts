@@ -1,5 +1,24 @@
-
 export const API_BASE_URL = import.meta.env.VITE_ARI_API_URL;
+
+// SSE chunk types from the streaming API
+interface StreamChunk {
+  event?: 'conversation_metadata' | 'conversation_title_update' | 'message_start';
+  conversation_id?: string;
+  title?: string;
+  updated_at?: string;
+  message_id?: string;
+  choices?: Array<{
+    delta?: { content?: string };
+    finish_reason?: string | null;
+  }>;
+}
+
+interface StreamQueryBody {
+  query: string;
+  collection_name: string;
+  conversation_id?: string;
+}
+
 export const api = {
   register: async (email: string, password: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -45,11 +64,10 @@ export const api = {
     accessToken: string,
     conversationId: string | null,
     collection_name: string,
-    onChunk: (data: any) => void,
+    onChunk: (data: StreamChunk) => void,
     onClose: () => void
   ) => {
-    // Prepare request body
-    const body: any = { query, collection_name: collection_name || "cmc_docs" };
+    const body: StreamQueryBody = { query, collection_name: collection_name || "documents" };
 
     // Set conversation ID if provided
     if (conversationId && !conversationId.startsWith("temp-")) {
@@ -94,19 +112,14 @@ export const api = {
           const cleanLine = line.replace(/^data:\s*/, "").trim();
 
           if (cleanLine === "[DONE]") {
-            console.log("Streaming complete.");
             doneStreaming = true;
             break;
           }
           try {
             const parsed = JSON.parse(cleanLine);
-            // console.log("Parsed SSE line data type: ", typeof parsed);
-            console.log("Parsed SSE Line going to onChunk:", parsed);
             onChunk(parsed);
-          } catch (err) {
-            // fallback if not JSON
-            console.log("Fallback catch block ran. Raw SSE line:", line);
-            console.warn("Non-JSON SSE line:", line, err);
+          } catch {
+            // Fallback for non-JSON SSE lines
             onChunk({ choices: [{ delta: { content: line } }] });
           }
         }
@@ -120,7 +133,6 @@ export const api = {
           const parsed = JSON.parse(cleanRemaining);
           onChunk(parsed);
         } catch {
-          console.log("Remaining raw line fallback triggered:", remaining);
           onChunk({ choices: [{ delta: { content: remaining } }] });
         }
       }
@@ -146,8 +158,7 @@ export const api = {
     return response.json(); // <-- returns { conversations: [ConversationsOut] }
   },
 
-  // Need to finish this feature
-  getConversationMessages: async (conversationId, accessToken: string) => {
+  getConversationMessages: async (conversationId: string, accessToken: string) => {
     const response = await fetch(`${API_BASE_URL}/chat/${conversationId}/messages`, {
       method: 'GET',
       headers: {

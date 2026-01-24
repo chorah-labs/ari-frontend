@@ -39,7 +39,7 @@
    **Branch naming convention:**
    ```bash
    feature/    # feature implementation
-   bugfix/     # fix issues
+   fix/     # fix issues
    hotfix/     # address critical issues in production (no hotfixes unless absolutely necessary)
    docs/       # changes to documentation
    chore/      # non-code tasks
