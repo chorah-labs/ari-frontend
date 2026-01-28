@@ -8,17 +8,19 @@ import { useNavigate } from 'react-router-dom';
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('accessToken'));
-  const [refreshToken, setRefreshToken] = useState<string | null>(localStorage.getItem('refreshToken'));
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('accessToken');
-    if (storedToken) {
-      setAccessToken(storedToken);
-    }
+    // Initialize auth state from localStorage on mount
+    const storedAccessToken = localStorage.getItem('accessToken');
+    const storedRefreshToken = localStorage.getItem('refreshToken');
+    
+    setAccessToken(storedAccessToken);
+    setRefreshToken(storedRefreshToken);
     setIsLoading(false);
   }, []);
 
